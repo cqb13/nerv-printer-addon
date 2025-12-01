@@ -1,6 +1,7 @@
 package com.julflips.nerv_printer.modules;
 
 import com.julflips.nerv_printer.Addon;
+import com.julflips.nerv_printer.utils.MapAreaCache;
 import com.julflips.nerv_printer.utils.Utils;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.render.Render3DEvent;
@@ -485,7 +486,7 @@ public class FullBlockPrinter extends Module {
             for (int lineBonus = 0; lineBonus < linesPerRun.get(); lineBonus++) {
                 if (x + lineBonus > 127) break;
                 for (int z = 0; z < 128; z++) {
-                    BlockState blockstate = mc.world.getBlockState(mapCorner.add(x + lineBonus, 0, z));
+                    BlockState blockstate = MapAreaCache.getCachedBlockState(mapCorner.add(x + lineBonus, 0, z));
                     if (blockstate.isAir()) {
                         lineFinished = false;
                         break;
@@ -517,7 +518,7 @@ public class FullBlockPrinter extends Module {
             for (int lineBonus = 0; lineBonus < linesPerRun.get(); lineBonus++) {
                 if (x + lineBonus > 127) break;
                 for (int z = 0; z < 128; z++) {
-                    BlockState blockState = mc.world.getBlockState(mapCorner.add(x + lineBonus, 0, z));
+                    BlockState blockState = MapAreaCache.getCachedBlockState(mapCorner.add(x + lineBonus, 0, z));
                     if (!blockState.isAir()) {
                         if (map[x + lineBonus][z] != blockState.getBlock()) {
                             int xError = x + lineBonus + mapCorner.getX();
@@ -536,7 +537,7 @@ public class FullBlockPrinter extends Module {
     @EventHandler
     private void onSendPacket(PacketEvent.Send event) {
         if (event.packet instanceof PlayerMoveC2SPacket) {
-            if (mc.world.getBlockState(mc.player.getBlockPos().down()).isAir() && state == State.Walking &&
+            if (MapAreaCache.getCachedBlockState(mc.player.getBlockPos().down()).isAir() && state == State.Walking &&
                 (checkpoints.get(0).getRight().getLeft() == "" || checkpoints.get(0).getRight().getLeft() == "lineEnd")) {
                 atEdge = true;
                 Utils.setWPressed(false);
@@ -559,12 +560,13 @@ public class FullBlockPrinter extends Module {
                 int adjustedX = Utils.getIntervalStart(hitPos.getX());
                 int adjustedZ = Utils.getIntervalStart(hitPos.getZ());
                 mapCorner = new BlockPos(adjustedX, hitPos.getY(), adjustedZ);
+                MapAreaCache.reset(mapCorner);
                 state = State.SelectingNorthReset;
                 info("Map Area selected. Press the §aNorth Reset Trapped Chest §7used to remove the built map");
                 break;
             case SelectingNorthReset:
                 BlockPos blockPos = packet.getBlockHitResult().getBlockPos();
-                if (mc.world.getBlockState(blockPos).getBlock() instanceof TrappedChestBlock) {
+                if (MapAreaCache.getCachedBlockState(blockPos).getBlock() instanceof TrappedChestBlock) {
                     northReset = new Pair<>(packet.getBlockHitResult(), mc.player.getPos());
                     info("North Reset Trapped Chest selected. Select the §aSouth Reset Trapped Chest.");
                     state = State.SelectingSouthReset;
@@ -572,7 +574,7 @@ public class FullBlockPrinter extends Module {
                 break;
             case SelectingSouthReset:
                 blockPos = packet.getBlockHitResult().getBlockPos();
-                if (mc.world.getBlockState(blockPos).getBlock() instanceof TrappedChestBlock) {
+                if (MapAreaCache.getCachedBlockState(blockPos).getBlock() instanceof TrappedChestBlock) {
                     southReset = new Pair<>(packet.getBlockHitResult(), mc.player.getPos());
                     info("South Reset Trapped Chest selected. Select the §aCartography Table.");
                     state = State.SelectingTable;
@@ -580,7 +582,7 @@ public class FullBlockPrinter extends Module {
                 break;
             case SelectingTable:
                 blockPos = packet.getBlockHitResult().getBlockPos();
-                if (mc.world.getBlockState(blockPos).getBlock().equals(Blocks.CARTOGRAPHY_TABLE)) {
+                if (MapAreaCache.getCachedBlockState(blockPos).getBlock().equals(Blocks.CARTOGRAPHY_TABLE)) {
                     cartographyTable = new Pair<>(packet.getBlockHitResult(), mc.player.getPos());
                     info("Cartography Table selected. Throw an item into the §aDump Station.");
                     state = State.SelectingDumpStation;
@@ -588,7 +590,7 @@ public class FullBlockPrinter extends Module {
                 break;
             case SelectingFinishedMapChest:
                 blockPos = packet.getBlockHitResult().getBlockPos();
-                if (mc.world.getBlockState(blockPos).getBlock() instanceof AbstractChestBlock) {
+                if (MapAreaCache.getCachedBlockState(blockPos).getBlock() instanceof AbstractChestBlock) {
                     finishedMapChest = new Pair<>(packet.getBlockHitResult(), mc.player.getPos());
                     info("Finished Map Chest selected. Select all §aMaterial- and Map-Chests.");
                     state = State.SelectingChests;
@@ -598,7 +600,7 @@ public class FullBlockPrinter extends Module {
                 if (startBlock.get().isEmpty())
                     warning("No block selected as Start Block! Please select one in the settings.");
                 blockPos = packet.getBlockHitResult().getBlockPos();
-                BlockState blockState = mc.world.getBlockState(blockPos);
+                BlockState blockState = MapAreaCache.getCachedBlockState(blockPos);
                 if (startBlock.get().contains(blockState.getBlock())) {
                     //Check if requirements to start building are met
                     if (materialDict.size() == 0) {
@@ -638,7 +640,7 @@ public class FullBlockPrinter extends Module {
                     }
                     state = State.Walking;
                 }
-                if (mc.world.getBlockState(blockPos).getBlock().equals(Blocks.CHEST)) {
+                if (MapAreaCache.getCachedBlockState(blockPos).getBlock().equals(Blocks.CHEST)) {
                     tempChestPos = blockPos;
                     state = State.AwaitContent;
                 }
@@ -812,7 +814,7 @@ public class FullBlockPrinter extends Module {
             if (nextResetNorth) adjustedZ = map[0].length - z - 1;
             for (int x = 0; x < map.length; x++) {
                 BlockPos pos = new BlockPos(mapCorner.add(x, 0, adjustedZ));
-                if (mc.world.getBlockState(pos).isAir()) {
+                if (MapAreaCache.getCachedBlockState(pos).isAir()) {
                     return adjustedZ;
                 }
             }
@@ -828,7 +830,7 @@ public class FullBlockPrinter extends Module {
         for (int z = 0; z < map[0].length; z++) {
             for (int x = 0; x < map.length; x++) {
                 BlockPos pos = new BlockPos(mapCorner.add(x, 0, z));
-                if (!mc.world.getBlockState(pos).isAir()) return false;
+                if (!MapAreaCache.getCachedBlockState(pos).isAir()) return false;
             }
         }
         return true;
@@ -1073,16 +1075,16 @@ public class FullBlockPrinter extends Module {
             BlockPos playerGroundPos = mc.player.getBlockPos().add(0, mapCorner.getY() - mc.player.getBlockY(), 0);
             Utils.iterateBlocks(playerGroundPos, (int) Math.ceil(placeRange.get()) + 1, 0, ((blockPos, blockState) -> {
                 Double posDistance = PlayerUtils.distanceTo(blockPos.toCenterPos());
-                if ((blockState.isAir()) && posDistance <= placeRange.get() && isWithingMap(blockPos)
+                if ((blockState.isAir()) && posDistance <= placeRange.get() && MapAreaCache.isWithingMap(blockPos)
                     && blockPos.getX() <= currentGoal.getX() && !placements.contains(blockPos)) {
                     if (closestPos.get() == null) {
-                        if (!mc.world.getBlockState(blockPos.west()).isAir())
+                        if (!MapAreaCache.getCachedBlockState(blockPos.west()).isAir())
                             closestPos.set(new BlockPos(blockPos.getX(), blockPos.getY(), blockPos.getZ()));
                         return;
                     }
                     int blockPosZDiff = Math.abs(mc.player.getBlockPos().getZ() - blockPos.getZ());
                     int closestPosZDiff = Math.abs(mc.player.getBlockPos().getZ() - closestPos.get().getZ());
-                    if (!mc.world.getBlockState(blockPos.west()).isAir() && (blockPosZDiff < closestPosZDiff ||
+                    if (!MapAreaCache.getCachedBlockState(blockPos.west()).isAir() && (blockPosZDiff < closestPosZDiff ||
                         (blockPosZDiff == closestPosZDiff && blockPos.getX() < closestPos.get().getX()))) {
                         closestPos.set(new BlockPos(blockPos.getX(), blockPos.getY(), blockPos.getZ()));
                     }
@@ -1213,11 +1215,6 @@ public class FullBlockPrinter extends Module {
         mc.player.setPitch((float) Rotations.getPitch(hitResult.getBlockPos().toCenterPos()));
         BlockUtils.interact(hitResult, Hand.MAIN_HAND, true);
         interactTimeout = retryInteractTimer.get();
-    }
-
-    private boolean isWithingMap(BlockPos pos) {
-        BlockPos relativePos = pos.subtract(mapCorner);
-        return relativePos.getX() >= 0 && relativePos.getX() < map.length && relativePos.getZ() >= 0 && relativePos.getZ() < map[0].length;
     }
 
     private Block getMaterialFromPos(BlockPos pos) {

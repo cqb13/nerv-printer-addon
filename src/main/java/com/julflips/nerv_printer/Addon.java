@@ -3,7 +3,10 @@ package com.julflips.nerv_printer;
 import com.julflips.nerv_printer.modules.CarpetPrinter;
 import com.julflips.nerv_printer.modules.FullBlockPrinter;
 import com.julflips.nerv_printer.modules.MapNamer;
+import com.julflips.nerv_printer.utils.MapAreaCache;
+import com.julflips.nerv_printer.utils.Utils;
 import com.mojang.logging.LogUtils;
+import meteordevelopment.meteorclient.MeteorClient;
 import meteordevelopment.meteorclient.addons.MeteorAddon;
 import meteordevelopment.meteorclient.systems.modules.Category;
 import meteordevelopment.meteorclient.systems.modules.Modules;
@@ -16,6 +19,9 @@ public class Addon extends MeteorAddon {
     @Override
     public void onInitialize() {
         LOG.info("Initializing Nerv Printer");
+        // Subscribe Util classes to Events
+        MeteorClient.EVENT_BUS.subscribe(Utils.class);
+        MeteorClient.EVENT_BUS.subscribe(MapAreaCache.class);
 
         // Modules
         Modules.get().add(new CarpetPrinter());

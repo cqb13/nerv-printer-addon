@@ -1,6 +1,7 @@
 package com.julflips.nerv_printer.modules;
 
 import com.julflips.nerv_printer.Addon;
+import com.julflips.nerv_printer.utils.MapAreaCache;
 import com.julflips.nerv_printer.utils.Utils;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.render.Render3DEvent;
@@ -450,7 +451,7 @@ public class CarpetPrinter extends Module {
             for (int lineBonus = 0; lineBonus < linesPerRun.get(); lineBonus++) {
                 if (x + lineBonus > 127) break;
                 for (int z = 0; z < 128; z++) {
-                    BlockState blockState = mc.world.getBlockState(mapCorner.add(x + lineBonus, 0, z));
+                    BlockState blockState = MapAreaCache.getCachedBlockState(mapCorner.add(x + lineBonus, 0, z));
                     if (blockState.isAir() && map[x + lineBonus][z] != null) {
                         //If there is a replaceable block and not an ignored block type at the position. Mark the line as not done
                         lineFinished = false;
@@ -493,12 +494,13 @@ public class CarpetPrinter extends Module {
                 int adjustedX = Utils.getIntervalStart(hitPos.getX());
                 int adjustedZ = Utils.getIntervalStart(hitPos.getZ());
                 mapCorner = new BlockPos(adjustedX, hitPos.getY(), adjustedZ);
+                MapAreaCache.reset(mapCorner);
                 state = State.SelectingReset;
                 info("Map Area selected. Press the §aReset Trapped Chest §7used to remove the carpets");
                 break;
             case SelectingReset:
                 BlockPos blockPos = packet.getBlockHitResult().getBlockPos();
-                if (mc.world.getBlockState(blockPos).getBlock() instanceof TrappedChestBlock) {
+                if (MapAreaCache.getCachedBlockState(blockPos).getBlock() instanceof TrappedChestBlock) {
                     reset = new Pair<>(packet.getBlockHitResult(), mc.player.getPos());
                     info("Reset Trapped Chest selected. Select the §aCartography Table.");
                     state = State.SelectingTable;
@@ -506,7 +508,7 @@ public class CarpetPrinter extends Module {
                 break;
             case SelectingTable:
                 blockPos = packet.getBlockHitResult().getBlockPos();
-                if (mc.world.getBlockState(blockPos).getBlock().equals(Blocks.CARTOGRAPHY_TABLE)) {
+                if (MapAreaCache.getCachedBlockState(blockPos).getBlock().equals(Blocks.CARTOGRAPHY_TABLE)) {
                     cartographyTable = new Pair<>(packet.getBlockHitResult(), mc.player.getPos());
                     info("Cartography Table selected. Please throw an item into the §aDump Station.");
                     state = State.SelectingDumpStation;
@@ -514,7 +516,7 @@ public class CarpetPrinter extends Module {
                 break;
             case SelectingFinishedMapChest:
                 blockPos = packet.getBlockHitResult().getBlockPos();
-                if (mc.world.getBlockState(blockPos).getBlock() instanceof AbstractChestBlock) {
+                if (MapAreaCache.getCachedBlockState(blockPos).getBlock() instanceof AbstractChestBlock) {
                     finishedMapChest = new Pair<>(packet.getBlockHitResult(), mc.player.getPos());
                     info("Finished Map Chest selected. Select all §aMap- and Material-Chests. Interact with the Start Block to start printing.");
                     state = State.SelectingChests;
@@ -524,7 +526,7 @@ public class CarpetPrinter extends Module {
                 if (startBlock.get().isEmpty())
                     warning("No block selected as Start Block! Please select one in the settings.");
                 blockPos = packet.getBlockHitResult().getBlockPos();
-                BlockState blockState = mc.world.getBlockState(blockPos);
+                BlockState blockState = MapAreaCache.getCachedBlockState(blockPos);
                 if (startBlock.get().contains(blockState.getBlock())) {
                     //Check if requirements to start building are met
                     if (materialDict.size() == 0) {
@@ -803,7 +805,7 @@ public class CarpetPrinter extends Module {
         }
 
         if (state == State.AwaitBlockBreak) {
-            if (mc.world.getBlockState(repairingPos).isAir()) {
+            if (MapAreaCache.getCachedBlockState(repairingPos).isAir()) {
                 repairingPos = null;
                 state = State.Walking;
                 if (checkpoints.isEmpty()) calculateBuildingPath(false, true);
@@ -830,7 +832,7 @@ public class CarpetPrinter extends Module {
             }
         }
 
-        if (state == State.AwaitAreaClear && isMapAreaClear()) {
+        if (state == State.AwaitAreaClear && MapAreaCache.isMapAreaClear()) {
             state = State.AwaitNBTFile;
             return;
         }
@@ -875,7 +877,7 @@ public class CarpetPrinter extends Module {
                             if (previousInvalidPlacements.contains(placement)) continue;
                             BlockPos absolutePlacement = placement.add(mapCorner);
                             info("Error detected at: " + absolutePlacement.toShortString() + ". Is: "
-                                + mc.world.getBlockState(absolutePlacement).getBlock().getName().getString()
+                                + MapAreaCache.getCachedBlockState(absolutePlacement).getBlock().getName().getString()
                                 + ". Should be: " + map[placement.getX()][placement.getZ()].getName().getString());
                         }
                         previousInvalidPlacements = (ArrayList<BlockPos>) invalidPlacements.clone();
@@ -1003,7 +1005,7 @@ public class CarpetPrinter extends Module {
                 Double posDistance = PlayerUtils.distanceTo(blockPos.toCenterPos());
                 BlockPos relativePos = blockPos.subtract(mapCorner);
                 if (blockState.isAir() && posDistance <= placeRange.get() && posDistance > minPlaceDistance.get()
-                    && isWithingMap(blockPos) && map[relativePos.getX()][relativePos.getZ()] != null
+                    && MapAreaCache.isWithingMap(blockPos) && map[relativePos.getX()][relativePos.getZ()] != null
                     && blockPos.getX() <= currentGoal.getX() + linesPerRun.get() - 1 && !placements.contains(blockPos)) {
                     if (closestPos.get() == null || posDistance < PlayerUtils.distanceTo(closestPos.get())) {
                         closestPos.set(new BlockPos(blockPos.getX(), blockPos.getY(), blockPos.getZ()));
@@ -1130,21 +1132,6 @@ public class CarpetPrinter extends Module {
         mc.player.setPitch((float) Rotations.getPitch(hitResult.getBlockPos().toCenterPos()));
         BlockUtils.interact(hitResult, Hand.MAIN_HAND, true);
         interactTimeout = retryInteractTimer.get();
-    }
-
-    private boolean isWithingMap(BlockPos pos) {
-        BlockPos relativePos = pos.subtract(mapCorner);
-        return relativePos.getX() >= 0 && relativePos.getX() < map.length && relativePos.getZ() >= 0 && relativePos.getZ() < map[0].length;
-    }
-
-    private boolean isMapAreaClear() {
-        for (int x = 0; x < map.length; x++) {
-            for (int z = 0; z < map[0].length; z++) {
-                BlockState blockState = mc.world.getBlockState(mapCorner.add(x, 0, z));
-                if (!blockState.isAir() || !blockState.getFluidState().isEmpty()) return false;
-            }
-        }
-        return true;
     }
 
     private Block getMaterialFromPos(BlockPos pos) {

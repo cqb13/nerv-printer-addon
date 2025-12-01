@@ -86,7 +86,7 @@ public class Utils {
                     if (x + lineBonus > 127) break;
                     int adjustedZ = z;
                     if (!isStartSide) adjustedZ = 127 - z;
-                    BlockState blockState = mc.world.getBlockState(mapCorner.add(x + lineBonus, 0, adjustedZ));
+                    BlockState blockState = MapAreaCache.getCachedBlockState(mapCorner.add(x + lineBonus, 0, adjustedZ));
                     if (blockState.isAir() && map[x + lineBonus][adjustedZ] != null) {
                         //ChatUtils.info("Add material for: " + mapCorner.add(x + lineBonus, 0, adjustedZ).toShortString());
                         Block material = map[x + lineBonus][adjustedZ];
@@ -242,7 +242,7 @@ public class Utils {
             for (int z = pz - hRadius; z <= pz + hRadius; z++) {
                 for (int y = py - vRadius; y <= py + vRadius; y++) {
                     blockPos.set(x, y, z);
-                    BlockState blockState = mc.world.getBlockState(blockPos);
+                    BlockState blockState = MapAreaCache.getCachedBlockState(blockPos);
                     function.accept(blockPos, blockState);
                 }
             }
@@ -349,7 +349,7 @@ public class Utils {
         for (int x = 127; x >= 0; x--) {
             for (int z = 127; z >= 0; z--) {
                 BlockPos relativePos = new BlockPos(x, 0, z);
-                BlockState blockState = mc.world.getBlockState(mapCorner.add(relativePos));
+                BlockState blockState = MapAreaCache.getCachedBlockState(mapCorner.add(relativePos));
                 Block block = blockState.getBlock();
                 if (!blockState.isAir()) {
                     if (map[x][z] != block) invalidPlacements.add(relativePos);
@@ -417,7 +417,7 @@ public class Utils {
     }
 
     @EventHandler(priority = EventPriority.HIGHEST - 1)
-    private void onReceivePacket(PacketEvent.Receive event) {
+    private static void onRecievePacket(PacketEvent.Receive event) {
         if (event.packet instanceof PlayerInteractItemC2SPacket packet) {
             nextInteractID = packet.getSequence() + 1;
         }

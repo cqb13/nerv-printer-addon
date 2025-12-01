@@ -1,6 +1,7 @@
 package com.julflips.nerv_printer.modules;
 
 import com.julflips.nerv_printer.Addon;
+import com.julflips.nerv_printer.utils.MapAreaCache;
 import com.julflips.nerv_printer.utils.Utils;
 import meteordevelopment.meteorclient.MeteorClient;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
@@ -445,7 +446,7 @@ public class StaircasedPrinter extends Module {
         for (int x = 0; x < 128; x++) {
             boolean lineFinished = true;
             for (int z = 0; z < 128; z++) {
-                BlockState blockstate = mc.world.getBlockState(mapCorner.add(x, map[x][z].getRight(), z));
+                BlockState blockstate = MapAreaCache.getCachedBlockState(mapCorner.add(x, map[x][z].getRight(), z));
                 if (blockstate.isAir()) {
                     lineFinished = false;
                     break;
@@ -469,7 +470,7 @@ public class StaircasedPrinter extends Module {
         boolean valid = true;
         for (int x = 0; x < 128; x++) {
             for (int z = 0; z < 128; z++) {
-                BlockState blockState = mc.world.getBlockState(mapCorner.add(x, map[x][z].getRight(), z));
+                BlockState blockState = MapAreaCache.getCachedBlockState(mapCorner.add(x, map[x][z].getRight(), z));
                 if (!blockState.isAir()) {
                     if (map[x][z].getLeft() != blockState.getBlock()) {
                         int xError = x + mapCorner.getX();
@@ -500,12 +501,13 @@ public class StaircasedPrinter extends Module {
                 int adjustedX = Utils.getIntervalStart(hitPos.getX());
                 int adjustedZ = Utils.getIntervalStart(hitPos.getZ());
                 mapCorner = new BlockPos(adjustedX, hitPos.getY(), adjustedZ);
+                MapAreaCache.reset(mapCorner);
                 state = State.SelectingPickaxeChest;
                 info("Map Area selected. Select the §aPickaxe Chest. (By opening it)");
                 break;
             case SelectingPickaxeChest:
                 BlockPos blockPos = packet.getBlockHitResult().getBlockPos();
-                if (mc.world.getBlockState(blockPos).getBlock() instanceof AbstractChestBlock) {
+                if (MapAreaCache.getCachedBlockState(blockPos).getBlock() instanceof AbstractChestBlock) {
                     pickaxeChest = new Pair<>(packet.getBlockHitResult(), mc.player.getPos());
                     info("Pickaxe Chest selected. Select the §aUsed Pickaxe Chest.");
                     state = State.SelectingUsedPickaxeChest;
@@ -513,7 +515,7 @@ public class StaircasedPrinter extends Module {
                 break;
             case SelectingUsedPickaxeChest:
                 blockPos = packet.getBlockHitResult().getBlockPos();
-                if (mc.world.getBlockState(blockPos).getBlock() instanceof AbstractChestBlock) {
+                if (MapAreaCache.getCachedBlockState(blockPos).getBlock() instanceof AbstractChestBlock) {
                     usedPickaxeChest = new Pair<>(packet.getBlockHitResult(), mc.player.getPos());
                     info("Used Pickaxe Chest selected. Select the §aCartography Table.");
                     state = State.SelectingTable;
@@ -521,7 +523,7 @@ public class StaircasedPrinter extends Module {
                 break;
             case SelectingTable:
                 blockPos = packet.getBlockHitResult().getBlockPos();
-                if (mc.world.getBlockState(blockPos).getBlock().equals(Blocks.CARTOGRAPHY_TABLE)) {
+                if (MapAreaCache.getCachedBlockState(blockPos).getBlock().equals(Blocks.CARTOGRAPHY_TABLE)) {
                     cartographyTable = new Pair<>(packet.getBlockHitResult(), mc.player.getPos());
                     info("Cartography Table selected. Throw an item into the §aDump Station.");
                     state = State.SelectingDumpStation;
@@ -529,7 +531,7 @@ public class StaircasedPrinter extends Module {
                 break;
             case SelectingFinishedMapChest:
                 blockPos = packet.getBlockHitResult().getBlockPos();
-                if (mc.world.getBlockState(blockPos).getBlock() instanceof AbstractChestBlock) {
+                if (MapAreaCache.getCachedBlockState(blockPos).getBlock() instanceof AbstractChestBlock) {
                     finishedMapChest = new Pair<>(packet.getBlockHitResult(), mc.player.getPos());
                     info("Finished Map Chest selected. Select all §aMaterial- and Map-Chests.");
                     state = State.SelectingChests;
@@ -539,7 +541,7 @@ public class StaircasedPrinter extends Module {
                 if (startBlock.get().isEmpty())
                     warning("No block selected as Start Block! Please select one in the settings.");
                 blockPos = packet.getBlockHitResult().getBlockPos();
-                BlockState blockState = mc.world.getBlockState(blockPos);
+                BlockState blockState = MapAreaCache.getCachedBlockState(blockPos);
                 if (startBlock.get().contains(blockState.getBlock())) {
                     //Check if requirements to start building are met
                     if (materialDict.size() == 0) {
@@ -579,7 +581,7 @@ public class StaircasedPrinter extends Module {
                     }
                     state = State.Walking;
                 }
-                if (mc.world.getBlockState(blockPos).getBlock().equals(Blocks.CHEST)) {
+                if (MapAreaCache.getCachedBlockState(blockPos).getBlock().equals(Blocks.CHEST)) {
                     tempChestPos = blockPos;
                     state = State.AwaitContent;
                 }
@@ -1014,7 +1016,7 @@ public class StaircasedPrinter extends Module {
             for (int z = 0; z < 128; z++) {
                 BlockPos blockPos = mapCorner.add(x, map[x][z].getRight(), z);
                 if (ignoreList.contains(blockPos)) continue;
-                BlockState blockState = mc.world.getBlockState(blockPos);
+                BlockState blockState = MapAreaCache.getCachedBlockState(blockPos);
                 if (blockState.isAir()) {
                     return blockPos;
                 }
@@ -1216,7 +1218,7 @@ public class StaircasedPrinter extends Module {
         HashMap<Block, Integer> requiredItems = new HashMap<>();
         for (int x = 0; x < 128; x++) {
             for (int z = 0; z < 128; z++) {
-                BlockState blockState = mc.world.getBlockState(mapCorner.add(x, map[x][z].getRight(), z));
+                BlockState blockState = MapAreaCache.getCachedBlockState(mapCorner.add(x, map[x][z].getRight(), z));
                 if (blockState.isAir() && map[x][z] != null) {
                     //ChatUtils.info("Add material for: " + mapCorner.add(x + lineBonus, 0, adjustedZ).toShortString());
                     Block material = map[x][z].getLeft();
