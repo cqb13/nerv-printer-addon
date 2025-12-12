@@ -865,8 +865,6 @@ public class CarpetPrinter extends Module {
             Pair<String, BlockPos> checkpointAction = checkpoints.get(0).getRight();
             if (debugPrints.get() && checkpointAction.getLeft() != null) info("Reached " + checkpointAction.getLeft());
             checkpoints.remove(0);
-            mc.player.setPosition(goal.getX(), mc.player.getY(), goal.getZ());
-            mc.player.setVelocity(0, 0, 0);
             switch (checkpointAction.getLeft()) {
                 case "lineEnd":
                     boolean atCornerSide = goal.z == mapCorner.toCenterPos().z;
