@@ -46,263 +46,234 @@ import java.util.*;
 
 public class StaircasedPrinter extends Module {
     private final SettingGroup sgGeneral = settings.getDefaultGroup();
-    private final SettingGroup sgAdvanced = settings.createGroup("Advanced",  false);
+    private final SettingGroup sgAdvanced = settings.createGroup("Advanced", false);
     private final SettingGroup sgError = settings.createGroup("Error Handling");
     private final SettingGroup sgRender = settings.createGroup("Render");
 
-    //General
+    // General
 
     private final Setting<Double> placeRange = sgGeneral.add(new DoubleSetting.Builder()
-        .name("place-range")
-        .description("The maximum range you can place blocks around yourself.")
-        .defaultValue(4)
-        .min(1)
-        .sliderRange(1, 5)
-        .build()
-    );
+            .name("place-range")
+            .description("The maximum range you can place blocks around yourself.")
+            .defaultValue(4)
+            .min(1)
+            .sliderRange(1, 5)
+            .build());
 
     private final Setting<Integer> placeDelay = sgGeneral.add(new IntSetting.Builder()
-        .name("place-delay")
-        .description("How many milliseconds to wait after placing.")
-        .defaultValue(50)
-        .min(1)
-        .sliderRange(10, 300)
-        .build()
-    );
+            .name("place-delay")
+            .description("How many milliseconds to wait after placing.")
+            .defaultValue(50)
+            .min(1)
+            .sliderRange(10, 300)
+            .build());
 
     private final Setting<List<Block>> startBlock = sgGeneral.add(new BlockListSetting.Builder()
-        .name("start-Block")
-        .description("Which block to interact with to start the printing process.")
-        .defaultValue(Blocks.STONE_BUTTON, Blocks.ACACIA_BUTTON, Blocks.BAMBOO_BUTTON, Blocks.BIRCH_BUTTON,
-            Blocks.CRIMSON_BUTTON, Blocks.DARK_OAK_BUTTON, Blocks.JUNGLE_BUTTON, Blocks.OAK_BUTTON,
-            Blocks.POLISHED_BLACKSTONE_BUTTON, Blocks.SPRUCE_BUTTON, Blocks.WARPED_BUTTON)
-        .build()
-    );
+            .name("start-Block")
+            .description("Which block to interact with to start the printing process.")
+            .defaultValue(Blocks.STONE_BUTTON, Blocks.ACACIA_BUTTON, Blocks.BAMBOO_BUTTON, Blocks.BIRCH_BUTTON,
+                    Blocks.CRIMSON_BUTTON, Blocks.DARK_OAK_BUTTON, Blocks.JUNGLE_BUTTON, Blocks.OAK_BUTTON,
+                    Blocks.POLISHED_BLACKSTONE_BUTTON, Blocks.SPRUCE_BUTTON, Blocks.WARPED_BUTTON)
+            .build());
 
     private final Setting<Integer> mapFillSquareSize = sgGeneral.add(new IntSetting.Builder()
-        .name("map-fill-square-size")
-        .description("The radius of the square the bot fill walk to explore the map.")
-        .defaultValue(1)
-        .min(0)
-        .sliderRange(0, 50)
-        .build()
-    );
+            .name("map-fill-square-size")
+            .description("The radius of the square the bot fill walk to explore the map.")
+            .defaultValue(1)
+            .min(0)
+            .sliderRange(0, 50)
+            .build());
 
     private final Setting<Boolean> activationReset = sgGeneral.add(new BoolSetting.Builder()
-        .name("activation-reset")
-        .description("Disable if the bot should continue after reconnecting to the server.")
-        .defaultValue(true)
-        .build()
-    );
+            .name("activation-reset")
+            .description("Disable if the bot should continue after reconnecting to the server.")
+            .defaultValue(true)
+            .build());
 
     private final Setting<SprintMode> sprinting = sgGeneral.add(new EnumSetting.Builder<SprintMode>()
-        .name("sprint-mode")
-        .description("How to sprint.")
-        .defaultValue(SprintMode.NotPlacing)
-        .build()
-    );
+            .name("sprint-mode")
+            .description("How to sprint.")
+            .defaultValue(SprintMode.NotPlacing)
+            .build());
 
     private final Setting<Boolean> customFolderPath = sgGeneral.add(new BoolSetting.Builder()
-        .name("custom-folder-path")
-        .description("Allows to set a custom path to the nbt folder.")
-        .defaultValue(false)
-        .build()
-    );
+            .name("custom-folder-path")
+            .description("Allows to set a custom path to the nbt folder.")
+            .defaultValue(false)
+            .build());
 
     public final Setting<String> mapPrinterFolderPath = sgGeneral.add(new StringSetting.Builder()
-        .name("nerv-printer-folder-path")
-        .description("The path to your nerv-printer directory.")
-        .defaultValue("C:\\Users\\(username)\\AppData\\Roaming\\.minecraft\\nerv-printer")
-        .wide()
-        .renderer(StarscriptTextBoxRenderer.class)
-        .visible(() -> customFolderPath.get())
-        .build()
-    );
+            .name("nerv-printer-folder-path")
+            .description("The path to your nerv-printer directory.")
+            .defaultValue("C:\\Users\\(username)\\AppData\\Roaming\\.minecraft\\nerv-printer")
+            .wide()
+            .renderer(StarscriptTextBoxRenderer.class)
+            .visible(() -> customFolderPath.get())
+            .build());
 
-    //Advanced
+    // Advanced
 
     private final Setting<Integer> preRestockDelay = sgAdvanced.add(new IntSetting.Builder()
-        .name("pre-restock-delay")
-        .description("How many ticks to wait to take items after opening the chest.")
-        .defaultValue(10)
-        .min(1)
-        .sliderRange(1, 40)
-        .build()
-    );
+            .name("pre-restock-delay")
+            .description("How many ticks to wait to take items after opening the chest.")
+            .defaultValue(10)
+            .min(1)
+            .sliderRange(1, 40)
+            .build());
 
     private final Setting<Integer> invActionDelay = sgAdvanced.add(new IntSetting.Builder()
-        .name("inventory-action-delay")
-        .description("How many ticks to wait between each inventory action (moving a stack).")
-        .defaultValue(2)
-        .min(1)
-        .sliderRange(1, 40)
-        .build()
-    );
+            .name("inventory-action-delay")
+            .description("How many ticks to wait between each inventory action (moving a stack).")
+            .defaultValue(2)
+            .min(1)
+            .sliderRange(1, 40)
+            .build());
 
     private final Setting<Integer> postRestockDelay = sgAdvanced.add(new IntSetting.Builder()
-        .name("post-restock-delay")
-        .description("How many ticks to wait after restocking.")
-        .defaultValue(10)
-        .min(1)
-        .sliderRange(1, 40)
-        .build()
-    );
+            .name("post-restock-delay")
+            .description("How many ticks to wait after restocking.")
+            .defaultValue(10)
+            .min(1)
+            .sliderRange(1, 40)
+            .build());
 
     private final Setting<Integer> preSwapDelay = sgAdvanced.add(new IntSetting.Builder()
-        .name("pre-swap-delay")
-        .description("How many ticks to wait before swapping an item into the hotbar.")
-        .defaultValue(5)
-        .min(0)
-        .sliderRange(0, 20)
-        .build()
-    );
+            .name("pre-swap-delay")
+            .description("How many ticks to wait before swapping an item into the hotbar.")
+            .defaultValue(5)
+            .min(0)
+            .sliderRange(0, 20)
+            .build());
 
     private final Setting<Integer> postSwapDelay = sgAdvanced.add(new IntSetting.Builder()
-        .name("post-swap-delay")
-        .description("How many ticks to wait after swapping an item into the hotbar.")
-        .defaultValue(5)
-        .min(0)
-        .sliderRange(0, 20)
-        .build()
-    );
+            .name("post-swap-delay")
+            .description("How many ticks to wait after swapping an item into the hotbar.")
+            .defaultValue(5)
+            .min(0)
+            .sliderRange(0, 20)
+            .build());
 
     private final Setting<Integer> retryInteractTimer = sgAdvanced.add(new IntSetting.Builder()
-        .name("retry-interact-timer")
-        .description("How many ticks to wait for chest response before interacting with it again.")
-        .defaultValue(80)
-        .min(1)
-        .sliderRange(20, 200)
-        .build()
-    );
+            .name("retry-interact-timer")
+            .description("How many ticks to wait for chest response before interacting with it again.")
+            .defaultValue(80)
+            .min(1)
+            .sliderRange(20, 200)
+            .build());
 
     private final Setting<Integer> posResetTimeout = sgAdvanced.add(new IntSetting.Builder()
-        .name("pos-reset-timeout")
-        .description("How many ticks to wait after the player position was reset by the server.")
-        .defaultValue(10)
-        .min(0)
-        .sliderRange(0, 40)
-        .build()
-    );
+            .name("pos-reset-timeout")
+            .description("How many ticks to wait after the player position was reset by the server.")
+            .defaultValue(10)
+            .min(0)
+            .sliderRange(0, 40)
+            .build());
 
     private final Setting<Double> checkpointBuffer = sgAdvanced.add(new DoubleSetting.Builder()
-        .name("checkpoint-buffer")
-        .description("The buffer area of the checkpoints. Larger means less precise walking, but might be desired at higher speeds.")
-        .defaultValue(0.2)
-        .min(0)
-        .sliderRange(0, 1)
-        .build()
-    );
+            .name("checkpoint-buffer")
+            .description(
+                    "The buffer area of the checkpoints. Larger means less precise walking, but might be desired at higher speeds.")
+            .defaultValue(0.2)
+            .min(0)
+            .sliderRange(0, 1)
+            .build());
 
     private final Setting<Boolean> moveToFinishedFolder = sgAdvanced.add(new BoolSetting.Builder()
-        .name("move-to-finished-folder")
-        .description("Moves finished NBT files into the finished-maps folder in the nerv-printer folder.")
-        .defaultValue(true)
-        .build()
-    );
+            .name("move-to-finished-folder")
+            .description("Moves finished NBT files into the finished-maps folder in the nerv-printer folder.")
+            .defaultValue(true)
+            .build());
 
     private final Setting<Boolean> disableOnFinished = sgAdvanced.add(new BoolSetting.Builder()
-        .name("disable-on-finished")
-        .description("Disables the printer when all nbt files are finished.")
-        .defaultValue(true)
-        .build()
-    );
+            .name("disable-on-finished")
+            .description("Disables the printer when all nbt files are finished.")
+            .defaultValue(true)
+            .build());
 
     private final Setting<Boolean> displayMaxRequirements = sgAdvanced.add(new BoolSetting.Builder()
-        .name("print-max-requirements")
-        .description("Print the maximum amount of material needed for all maps in the map-folder.")
-        .defaultValue(true)
-        .build()
-    );
+            .name("print-max-requirements")
+            .description("Print the maximum amount of material needed for all maps in the map-folder.")
+            .defaultValue(true)
+            .build());
 
     private final Setting<Boolean> debugPrints = sgAdvanced.add(new BoolSetting.Builder()
-        .name("debug-prints")
-        .description("Prints additional information.")
-        .defaultValue(false)
-        .build()
-    );
+            .name("debug-prints")
+            .description("Prints additional information.")
+            .defaultValue(false)
+            .build());
 
-    //Error Handling
+    // Error Handling
 
     private final Setting<Boolean> logErrors = sgError.add(new BoolSetting.Builder()
-        .name("log-errors")
-        .description("Prints warning when a misplacement is detected.")
-        .defaultValue(true)
-        .build()
-    );
+            .name("log-errors")
+            .description("Prints warning when a misplacement is detected.")
+            .defaultValue(true)
+            .build());
 
     private final Setting<ErrorAction> errorAction = sgError.add(new EnumSetting.Builder<ErrorAction>()
-        .name("error-action")
-        .description("What to do when a misplacement is detected.")
-        .defaultValue(ErrorAction.ToggleOff)
-        .build()
-    );
+            .name("error-action")
+            .description("What to do when a misplacement is detected.")
+            .defaultValue(ErrorAction.ToggleOff)
+            .build());
 
-    //Render
+    // Render
 
     private final Setting<Boolean> render = sgRender.add(new BoolSetting.Builder()
-        .name("render")
-        .description("Highlights the selected areas.")
-        .defaultValue(true)
-        .build()
-    );
+            .name("render")
+            .description("Highlights the selected areas.")
+            .defaultValue(true)
+            .build());
 
     private final Setting<Boolean> renderMap = sgRender.add(new BoolSetting.Builder()
-        .name("render-map")
-        .description("Highlights the position of the map blocks.")
-        .defaultValue(false)
-        .visible(() -> render.get())
-        .build()
-    );
+            .name("render-map")
+            .description("Highlights the position of the map blocks.")
+            .defaultValue(false)
+            .visible(() -> render.get())
+            .build());
 
     private final Setting<Boolean> renderChestPositions = sgRender.add(new BoolSetting.Builder()
-        .name("render-chest-positions")
-        .description("Highlights the selected chests.")
-        .defaultValue(true)
-        .visible(() -> render.get())
-        .build()
-    );
+            .name("render-chest-positions")
+            .description("Highlights the selected chests.")
+            .defaultValue(true)
+            .visible(() -> render.get())
+            .build());
 
     private final Setting<Boolean> renderOpenPositions = sgRender.add(new BoolSetting.Builder()
-        .name("render-open-positions")
-        .description("Indicate the position the bot will go to in order to interact with the chest.")
-        .defaultValue(true)
-        .visible(() -> render.get())
-        .build()
-    );
+            .name("render-open-positions")
+            .description("Indicate the position the bot will go to in order to interact with the chest.")
+            .defaultValue(true)
+            .visible(() -> render.get())
+            .build());
 
     private final Setting<Boolean> renderCheckpoints = sgRender.add(new BoolSetting.Builder()
-        .name("render-checkpoints")
-        .description("Indicate the checkpoints the bot will traverse.")
-        .defaultValue(true)
-        .visible(() -> render.get())
-        .build()
-    );
+            .name("render-checkpoints")
+            .description("Indicate the checkpoints the bot will traverse.")
+            .defaultValue(true)
+            .visible(() -> render.get())
+            .build());
 
     private final Setting<Boolean> renderSpecialInteractions = sgRender.add(new BoolSetting.Builder()
-        .name("render-special-interactions")
-        .description("Indicate the position where the reset button and cartography table will be used.")
-        .defaultValue(true)
-        .visible(() -> render.get())
-        .build()
-    );
+            .name("render-special-interactions")
+            .description("Indicate the position where the reset button and cartography table will be used.")
+            .defaultValue(true)
+            .visible(() -> render.get())
+            .build());
 
     private final Setting<Double> indicatorSize = sgRender.add(new DoubleSetting.Builder()
-        .name("indicator-size")
-        .description("How big the rendered indicator will be.")
-        .defaultValue(0.2)
-        .min(0)
-        .sliderRange(0, 1)
-        .visible(() -> render.get())
-        .build()
-    );
+            .name("indicator-size")
+            .description("How big the rendered indicator will be.")
+            .defaultValue(0.2)
+            .min(0)
+            .sliderRange(0, 1)
+            .visible(() -> render.get())
+            .build());
 
     private final Setting<SettingColor> color = sgRender.add(new ColorSetting.Builder()
-        .name("color")
-        .description("The render color.")
-        .defaultValue(new SettingColor(22, 230, 206, 155))
-        .visible(() -> render.get())
-        .build()
-    );
+            .name("color")
+            .description("The render color.")
+            .defaultValue(new SettingColor(22, 230, 206, 155))
+            .visible(() -> render.get())
+            .build());
     int timeoutTicks;
     int interactTimeout;
     int toBeSwappedSlot;
@@ -317,19 +288,19 @@ public class StaircasedPrinter extends Module {
     Pair<BlockHitResult, Vec3d> cartographyTable;
     Pair<BlockHitResult, Vec3d> finishedMapChest;
     ArrayList<Pair<BlockPos, Vec3d>> mapMaterialChests;
-    Pair<Vec3d, Pair<Float, Float>> dumpStation;                    //Pos, Yaw, Pitch
+    Pair<Vec3d, Pair<Float, Float>> dumpStation; // Pos, Yaw, Pitch
     BlockPos mapCorner;
     BlockPos tempChestPos;
     BlockPos lastInteractedChest;
     Block lastSwappedMaterial;
     InventoryS2CPacket toBeHandledInvPacket;
-    HashMap<Integer, Pair<Block, Integer>> blockPaletteDict;       //Maps palette block id to the Minecraft block and amount
-    HashMap<Block, ArrayList<Pair<BlockPos, Vec3d>>> materialDict; //Maps block to the chest pos and the open position
+    HashMap<Integer, Pair<Block, Integer>> blockPaletteDict; // Maps palette block id to the Minecraft block and amount
+    HashMap<Block, ArrayList<Pair<BlockPos, Vec3d>>> materialDict; // Maps block to the chest pos and the open position
     ArrayList<Integer> availableSlots;
     ArrayList<Integer> availableHotBarSlots;
-    ArrayList<Triple<Block, Integer, Integer>> restockList;        //Material, Stacks, Raw Amount
+    ArrayList<Triple<Block, Integer, Integer>> restockList; // Material, Stacks, Raw Amount
     ArrayList<BlockPos> checkedChests;
-    ArrayList<Pair<Vec3d, Pair<String, BlockPos>>> checkpoints;    //(GoalPos, (checkpointAction, targetBlock))
+    ArrayList<Pair<Vec3d, Pair<String, BlockPos>>> checkpoints; // (GoalPos, (checkpointAction, targetBlock))
     ArrayList<File> startedFiles;
     ArrayList<Integer> restockBacklogSlots;
     Pair<Block, Integer>[][] map;
@@ -337,7 +308,8 @@ public class StaircasedPrinter extends Module {
     File mapFile;
 
     public StaircasedPrinter() {
-        super(Addon.CATEGORY, "staircased-printer", "Automatically builds full-block maps with staircasing from nbt files.");
+        super(Addon.CATEGORY, "staircased-printer",
+                "Automatically builds full-block maps with staircasing from nbt files.");
     }
 
     @Override
@@ -385,29 +357,36 @@ public class StaircasedPrinter extends Module {
         if (displayMaxRequirements.get()) {
             HashMap<Block, Integer> materialCountDict = new HashMap<>();
             for (File file : mapFolder.listFiles()) {
-                if (!file.isFile()) continue;
-                if (!prepareNextMapFile()) return;
+                if (!file.isFile())
+                    continue;
+                if (!prepareNextMapFile())
+                    return;
                 for (Pair<Block, Integer> material : blockPaletteDict.values()) {
                     if (!materialCountDict.containsKey(material.getLeft())) {
                         materialCountDict.put(material.getLeft(), material.getRight());
                     } else {
-                        materialCountDict.put(material.getLeft(), Math.max(materialCountDict.get(material.getLeft()), material.getRight()));
+                        materialCountDict.put(material.getLeft(),
+                                Math.max(materialCountDict.get(material.getLeft()), material.getRight()));
                     }
                 }
             }
             info("§aMaterial needed for all files:");
             for (Block block : materialCountDict.keySet()) {
-                float shulkerAmount = (float) Math.ceil((float) materialCountDict.get(block) / (float) (27 * 64) * 10) / (float) 10;
-                if (shulkerAmount == 0) continue;
+                float shulkerAmount = (float) Math.ceil((float) materialCountDict.get(block) / (float) (27 * 64) * 10)
+                        / (float) 10;
+                if (shulkerAmount == 0)
+                    continue;
                 info(block.getName().getString() + ": " + shulkerAmount + " shulker");
             }
             startedFiles.clear();
         }
-        if (!prepareNextMapFile()) return;
+        if (!prepareNextMapFile())
+            return;
         info("Building: §a" + mapFile.getName());
         info("Requirements: ");
         for (Pair<Block, Integer> p : blockPaletteDict.values()) {
-            if (p.getRight() == 0) continue;
+            if (p.getRight() == 0)
+                continue;
             info(p.getLeft().getName().getString() + ": " + p.getRight());
         }
         state = State.SelectingMapArea;
@@ -420,7 +399,7 @@ public class StaircasedPrinter extends Module {
     }
 
     private void refillInventory(HashMap<Block, Integer> invMaterial) {
-        //Fills restockList with required items
+        // Fills restockList with required items
         restockList.clear();
         HashMap<Block, Integer> requiredItems = getRequiredItems(mapCorner, availableSlots.size(), map);
         for (Block material : invMaterial.keySet()) {
@@ -429,17 +408,20 @@ public class StaircasedPrinter extends Module {
         }
 
         for (Block block : requiredItems.keySet()) {
-            if (requiredItems.get(block) <= 0) continue;
+            if (requiredItems.get(block) <= 0)
+                continue;
             int stacks = (int) Math.ceil((float) requiredItems.get(block) / 64f);
-            info("Restocking §a" + stacks + " stacks " + block.getName().getString() + " (" + requiredItems.get(block) + ")");
+            info("Restocking §a" + stacks + " stacks " + block.getName().getString() + " (" + requiredItems.get(block)
+                    + ")");
             restockList.add(0, Triple.of(block, stacks, requiredItems.get(block)));
         }
         addClosestRestockCheckpoint();
     }
 
     private void addClosestRestockCheckpoint() {
-        //Determine closest restock chest for material in restock list
-        if (restockList.size() == 0) return;
+        // Determine closest restock chest for material in restock list
+        if (restockList.size() == 0)
+            return;
         double smallestDistance = Double.MAX_VALUE;
         Triple<Block, Integer, Integer> closestEntry = null;
         Pair<BlockPos, Vec3d> restockPos = null;
@@ -457,15 +439,16 @@ public class StaircasedPrinter extends Module {
                 restockPos = bestRestockPos;
             }
         }
-        //Set closest material as first and as checkpoint
+        // Set closest material as first and as checkpoint
         restockList.remove(closestEntry);
         restockList.add(0, closestEntry);
         checkpoints.add(0, new Pair(restockPos.getRight(), new Pair("refill", restockPos.getLeft())));
     }
 
     private void calculateBuildingPath(boolean sprintFirst) {
-        //Iterate over map and skip completed lines. Player has to be able to see the complete map area
-        //Fills checkpoints list
+        // Iterate over map and skip completed lines. Player has to be able to see the
+        // complete map area
+        // Fills checkpoints list
         checkpoints.clear();
         for (int x = 0; x < 128; x++) {
             boolean lineFinished = true;
@@ -476,7 +459,8 @@ public class StaircasedPrinter extends Module {
                     break;
                 }
             }
-            if (lineFinished) continue;
+            if (lineFinished)
+                continue;
             Vec3d cp1 = mapCorner.toCenterPos().add(x, 0, -1);
             Vec3d cp2 = mapCorner.toCenterPos().add(x, map[x][127].getRight(), map[0].length - 1);
             checkpoints.add(new Pair(cp1, new Pair("", null)));
@@ -484,7 +468,7 @@ public class StaircasedPrinter extends Module {
             checkpoints.add(new Pair(cp1, new Pair("lineEnd", null)));
         }
         if (checkpoints.size() > 0 && sprintFirst) {
-            //Make player sprint to the start of the map
+            // Make player sprint to the start of the map
             Pair<Vec3d, Pair<String, BlockPos>> firstPoint = checkpoints.remove(0);
             checkpoints.add(0, new Pair(firstPoint.getLeft(), new Pair("sprint", firstPoint.getRight().getRight())));
         }
@@ -499,8 +483,10 @@ public class StaircasedPrinter extends Module {
                     if (map[x][z].getLeft() != blockState.getBlock()) {
                         int xError = x + mapCorner.getX();
                         int zError = z + mapCorner.getZ();
-                        if (logErrors.get()) warning("Error at " + xError + ", " + zError + ". " +
-                            "Is " + blockState.getBlock().getName().getString() + " - Should be " + map[x][z].getLeft().getName().getString());
+                        if (logErrors.get())
+                            warning("Error at " + xError + ", " + zError + ". " +
+                                    "Is " + blockState.getBlock().getName().getString() + " - Should be "
+                                    + map[x][z].getLeft().getName().getString());
                         valid = false;
                     }
                 }
@@ -512,13 +498,14 @@ public class StaircasedPrinter extends Module {
     @EventHandler
     private void onSendPacket(PacketEvent.Send event) {
         if (state == State.SelectingDumpStation && event.packet instanceof PlayerActionC2SPacket packet
-            && packet.getAction() == PlayerActionC2SPacket.Action.DROP_ITEM) {
-            dumpStation = new Pair<>(mc.player.getPos(), new Pair<>(mc.player.getYaw(), mc.player.getPitch()));
+                && packet.getAction() == PlayerActionC2SPacket.Action.DROP_ITEM) {
+            dumpStation = new Pair<>(mc.player.getEntityPos(), new Pair<>(mc.player.getYaw(), mc.player.getPitch()));
             state = State.SelectingFinishedMapChest;
             info("Dump Station selected. Select the §aFinished Map Chest");
             return;
         }
-        if (!(event.packet instanceof PlayerInteractBlockC2SPacket packet) || state == null) return;
+        if (!(event.packet instanceof PlayerInteractBlockC2SPacket packet) || state == null)
+            return;
         switch (state) {
             case SelectingMapArea:
                 BlockPos hitPos = packet.getBlockHitResult().getBlockPos().offset(packet.getBlockHitResult().getSide());
@@ -532,7 +519,7 @@ public class StaircasedPrinter extends Module {
             case SelectingPickaxeChest:
                 BlockPos blockPos = packet.getBlockHitResult().getBlockPos();
                 if (MapAreaCache.getCachedBlockState(blockPos).getBlock() instanceof AbstractChestBlock) {
-                    pickaxeChest = new Pair<>(packet.getBlockHitResult(), mc.player.getPos());
+                    pickaxeChest = new Pair<>(packet.getBlockHitResult(), mc.player.getEntityPos());
                     info("Pickaxe Chest selected. Select the §aUsed Pickaxe Chest.");
                     state = State.SelectingUsedPickaxeChest;
                 }
@@ -540,7 +527,7 @@ public class StaircasedPrinter extends Module {
             case SelectingUsedPickaxeChest:
                 blockPos = packet.getBlockHitResult().getBlockPos();
                 if (MapAreaCache.getCachedBlockState(blockPos).getBlock() instanceof AbstractChestBlock) {
-                    usedPickaxeChest = new Pair<>(packet.getBlockHitResult(), mc.player.getPos());
+                    usedPickaxeChest = new Pair<>(packet.getBlockHitResult(), mc.player.getEntityPos());
                     info("Used Pickaxe Chest selected. Select the §aCartography Table.");
                     state = State.SelectingTable;
                 }
@@ -548,7 +535,7 @@ public class StaircasedPrinter extends Module {
             case SelectingTable:
                 blockPos = packet.getBlockHitResult().getBlockPos();
                 if (MapAreaCache.getCachedBlockState(blockPos).getBlock().equals(Blocks.CARTOGRAPHY_TABLE)) {
-                    cartographyTable = new Pair<>(packet.getBlockHitResult(), mc.player.getPos());
+                    cartographyTable = new Pair<>(packet.getBlockHitResult(), mc.player.getEntityPos());
                     info("Cartography Table selected. Throw an item into the §aDump Station.");
                     state = State.SelectingDumpStation;
                 }
@@ -556,7 +543,7 @@ public class StaircasedPrinter extends Module {
             case SelectingFinishedMapChest:
                 blockPos = packet.getBlockHitResult().getBlockPos();
                 if (MapAreaCache.getCachedBlockState(blockPos).getBlock() instanceof AbstractChestBlock) {
-                    finishedMapChest = new Pair<>(packet.getBlockHitResult(), mc.player.getPos());
+                    finishedMapChest = new Pair<>(packet.getBlockHitResult(), mc.player.getEntityPos());
                     info("Finished Map Chest selected. Select all §aMaterial- and Map-Chests.");
                     state = State.SelectingChests;
                 }
@@ -567,7 +554,7 @@ public class StaircasedPrinter extends Module {
                 blockPos = packet.getBlockHitResult().getBlockPos();
                 BlockState blockState = MapAreaCache.getCachedBlockState(blockPos);
                 if (startBlock.get().contains(blockState.getBlock())) {
-                    //Check if requirements to start building are met
+                    // Check if requirements to start building are met
                     if (materialDict.size() == 0) {
                         warning("No Material Chests selected!");
                         return;
@@ -587,7 +574,8 @@ public class StaircasedPrinter extends Module {
                     info("Inventory slots available for building: " + availableSlots);
 
                     HashMap<Block, Integer> requiredItems = getRequiredItems(mapCorner, availableSlots.size(), map);
-                    Pair<ArrayList<Integer>, HashMap<Block, Integer>> invInformation = Utils.getInvInformation(requiredItems, availableSlots);
+                    Pair<ArrayList<Integer>, HashMap<Block, Integer>> invInformation = Utils
+                            .getInvInformation(requiredItems, availableSlots);
                     if (invInformation.getLeft().size() != 0) {
                         checkpoints.add(0, new Pair(dumpStation.getLeft(), new Pair("dump", null)));
                     } else {
@@ -615,16 +603,18 @@ public class StaircasedPrinter extends Module {
 
     @EventHandler
     private void onReceivePacket(PacketEvent.Receive event) {
-        if (state == null) return;
+        if (state == null)
+            return;
 
         if (event.packet instanceof PlayerPositionLookS2CPacket) {
             timeoutTicks = posResetTimeout.get();
         }
 
-        if (!(event.packet instanceof InventoryS2CPacket packet)) return;
+        if (!(event.packet instanceof InventoryS2CPacket packet))
+            return;
 
         if (state.equals(State.AwaitContent)) {
-            //info("Chest content received.");
+            // info("Chest content received.");
             Item foundItem = null;
             boolean isMixedContent = false;
             for (int i = 0; i < packet.contents().size() - 36; i++) {
@@ -636,7 +626,7 @@ public class StaircasedPrinter extends Module {
                     foundItem = stack.getItem().asItem();
                     if (foundItem == Items.MAP || foundItem == Items.GLASS_PANE) {
                         info("Registered §aMapChest");
-                        mapMaterialChests = Utils.saveAdd(mapMaterialChests, tempChestPos, mc.player.getPos());
+                        mapMaterialChests = Utils.saveAdd(mapMaterialChests, tempChestPos, mc.player.getEntityPos());
                         state = State.SelectingChests;
                         return;
                     }
@@ -654,15 +644,16 @@ public class StaircasedPrinter extends Module {
             }
             Block chestContentBlock = Registries.BLOCK.get(Identifier.of(foundItem.toString()));
             info("Registered §a" + chestContentBlock.getName().getString());
-            if (!materialDict.containsKey(chestContentBlock)) materialDict.put(chestContentBlock, new ArrayList<>());
+            if (!materialDict.containsKey(chestContentBlock))
+                materialDict.put(chestContentBlock, new ArrayList<>());
             ArrayList<Pair<BlockPos, Vec3d>> oldList = materialDict.get(chestContentBlock);
-            ArrayList newChestList = Utils.saveAdd(oldList, tempChestPos, mc.player.getPos());
+            ArrayList newChestList = Utils.saveAdd(oldList, tempChestPos, mc.player.getEntityPos());
             materialDict.put(chestContentBlock, newChestList);
             state = State.SelectingChests;
         }
 
         List<State> allowedStates = Arrays.asList(State.AwaitRestockResponse, State.AwaitMapChestResponse,
-            State.AwaitCartographyResponse, State.AwaitFinishedMapChestResponse);
+                State.AwaitCartographyResponse, State.AwaitFinishedMapChestResponse);
         if (allowedStates.contains(state)) {
             toBeHandledInvPacket = packet;
             timeoutTicks = preRestockDelay.get();
@@ -670,7 +661,8 @@ public class StaircasedPrinter extends Module {
     }
 
     private void handleInventoryPacket(InventoryS2CPacket packet) {
-        if (debugPrints.get()) info("Handling InvPacket for: " + state);
+        if (debugPrints.get())
+            info("Handling InvPacket for: " + state);
         closeNextInvPacket = true;
         switch (state) {
             case AwaitRestockResponse:
@@ -684,7 +676,8 @@ public class StaircasedPrinter extends Module {
                         break;
                     }
                     if (!stack.isEmpty() && stack.getCount() == 64) {
-                        //info("Taking Stack of " + restockList.get(0).getLeft().getName().getString());
+                        // info("Taking Stack of " +
+                        // restockList.get(0).getLeft().getName().getString());
                         foundMaterials = true;
                         int highestFreeSlot = Utils.findHighestFreeSlot(packet);
                         if (highestFreeSlot == -1) {
@@ -695,19 +688,23 @@ public class StaircasedPrinter extends Module {
                         }
                         restockBacklogSlots.add(i);
                         Triple<Block, Integer, Integer> oldTriple = restockList.remove(0);
-                        restockList.add(0, Triple.of(oldTriple.getLeft(), oldTriple.getMiddle() - 1, oldTriple.getRight() - 64));
+                        restockList.add(0,
+                                Triple.of(oldTriple.getLeft(), oldTriple.getMiddle() - 1, oldTriple.getRight() - 64));
                     }
                 }
-                if (!foundMaterials) endRestocking();
+                if (!foundMaterials)
+                    endRestocking();
                 break;
             case AwaitMapChestResponse:
                 int mapSlot = -1;
                 int paneSlot = -1;
-                //Search for map and glass pane
+                // Search for map and glass pane
                 for (int slot = 0; slot < packet.contents().size() - 36; slot++) {
                     ItemStack stack = packet.contents().get(slot);
-                    if (stack.getItem() == Items.MAP) mapSlot = slot;
-                    if (stack.getItem() == Items.GLASS_PANE) paneSlot = slot;
+                    if (stack.getItem() == Items.MAP)
+                        mapSlot = slot;
+                    if (stack.getItem() == Items.GLASS_PANE)
+                        paneSlot = slot;
                 }
                 if (mapSlot == -1 || paneSlot == -1) {
                     warning("Not enough Empty Maps/Glass Panes in Map Material Chest");
@@ -719,7 +716,7 @@ public class StaircasedPrinter extends Module {
                 Utils.getOneItem(paneSlot, true, availableSlots, availableHotBarSlots, packet);
                 mc.player.getInventory().setSelectedSlot(availableHotBarSlots.get(0));
 
-                Vec3d center = mapCorner.add(map.length/2 - 1, 0, map[0].length/2 - 1).toCenterPos();
+                Vec3d center = mapCorner.add(map.length / 2 - 1, 0, map[0].length / 2 - 1).toCenterPos();
                 checkpoints.add(new Pair(center, new Pair("fillMap", null)));
                 state = State.Walking;
                 break;
@@ -728,30 +725,33 @@ public class StaircasedPrinter extends Module {
                 timeoutTicks = postRestockDelay.get();
                 boolean searchingMap = true;
                 for (int slot : availableSlots) {
-                    if (slot < 9) {  //Stupid slot correction
+                    if (slot < 9) { // Stupid slot correction
                         slot += 30;
                     } else {
                         slot -= 6;
                     }
                     ItemStack stack = packet.contents().get(slot);
                     if (searchingMap && stack.getItem() == Items.FILLED_MAP) {
-                        mc.interactionManager.clickSlot(packet.syncId(), slot, 0, SlotActionType.QUICK_MOVE, MeteorClient.mc.player);
+                        mc.interactionManager.clickSlot(packet.syncId(), slot, 0, SlotActionType.QUICK_MOVE,
+                                MeteorClient.mc.player);
                         searchingMap = false;
                     }
                 }
                 for (int slot : availableSlots) {
-                    if (slot < 9) {  //Stupid slot correction
+                    if (slot < 9) { // Stupid slot correction
                         slot += 30;
                     } else {
                         slot -= 6;
                     }
                     ItemStack stack = packet.contents().get(slot);
                     if (!searchingMap && stack.getItem() == Items.GLASS_PANE) {
-                        mc.interactionManager.clickSlot(packet.syncId(), slot, 0, SlotActionType.QUICK_MOVE, MeteorClient.mc.player);
+                        mc.interactionManager.clickSlot(packet.syncId(), slot, 0, SlotActionType.QUICK_MOVE,
+                                MeteorClient.mc.player);
                         break;
                     }
                 }
-                mc.interactionManager.clickSlot(packet.syncId(), 2, 0, SlotActionType.QUICK_MOVE, MeteorClient.mc.player);
+                mc.interactionManager.clickSlot(packet.syncId(), 2, 0, SlotActionType.QUICK_MOVE,
+                        MeteorClient.mc.player);
                 checkpoints.add(new Pair(finishedMapChest.getRight(), new Pair("finishedMapChest", null)));
                 state = State.Walking;
                 break;
@@ -761,7 +761,8 @@ public class StaircasedPrinter extends Module {
                 for (int slot = packet.contents().size() - 36; slot < packet.contents().size(); slot++) {
                     ItemStack stack = packet.contents().get(slot);
                     if (stack.getItem() == Items.FILLED_MAP) {
-                        mc.interactionManager.clickSlot(packet.syncId(), slot, 0, SlotActionType.QUICK_MOVE, MeteorClient.mc.player);
+                        mc.interactionManager.clickSlot(packet.syncId(), slot, 0, SlotActionType.QUICK_MOVE,
+                                MeteorClient.mc.player);
                         break;
                     }
                 }
@@ -774,11 +775,13 @@ public class StaircasedPrinter extends Module {
 
     @EventHandler
     private void onTick(TickEvent.Pre event) {
-        if (state == null) return;
+        if (state == null)
+            return;
 
         if (oldState != state) {
             oldState = state;
-            if (debugPrints.get()) info("Changed state to " + state.name());
+            if (debugPrints.get())
+                info("Changed state to " + state.name());
         }
 
         long timeDifference = System.currentTimeMillis() - lastTickTime;
@@ -815,7 +818,8 @@ public class StaircasedPrinter extends Module {
         // Restocking
         if (restockBacklogSlots.size() > 0) {
             int slot = restockBacklogSlots.remove(0);
-            mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId, slot, 1, SlotActionType.QUICK_MOVE, MeteorClient.mc.player);
+            mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId, slot, 1, SlotActionType.QUICK_MOVE,
+                    MeteorClient.mc.player);
             restockBacklogSlots.remove(0);
             if (restockBacklogSlots.size() == 0) {
                 if (state.equals(State.AwaitRestockResponse)) {
@@ -832,12 +836,14 @@ public class StaircasedPrinter extends Module {
             int dumpSlot = getDumpSlot();
             if (dumpSlot == -1) {
                 HashMap<Block, Integer> requiredItems = getRequiredItems(mapCorner, availableSlots.size(), map);
-                Pair<ArrayList<Integer>, HashMap<Block, Integer>> invInformation = Utils.getInvInformation(requiredItems, availableSlots);
+                Pair<ArrayList<Integer>, HashMap<Block, Integer>> invInformation = Utils
+                        .getInvInformation(requiredItems, availableSlots);
                 refillInventory(invInformation.getRight());
                 state = State.Walking;
             } else {
                 if (debugPrints.get())
-                    info("Dumping §a" + mc.player.getInventory().getStack(dumpSlot).getName().getString() + " (slot " + dumpSlot + ")");
+                    info("Dumping §a" + mc.player.getInventory().getStack(dumpSlot).getName().getString() + " (slot "
+                            + dumpSlot + ")");
                 InvUtils.drop().slot(dumpSlot);
                 timeoutTicks = invActionDelay.get();
             }
@@ -845,11 +851,13 @@ public class StaircasedPrinter extends Module {
 
         // Load next nbt file
         if (state == State.AwaitNBTFile) {
-            if (!prepareNextMapFile()) return;
+            if (!prepareNextMapFile())
+                return;
             info("Building: §a" + mapFile.getName());
             info("Requirements: ");
             for (Pair<Block, Integer> p : blockPaletteDict.values()) {
-                if (p.getRight() == 0) continue;
+                if (p.getRight() == 0)
+                    continue;
                 info(p.getLeft().getName().getString() + ": " + p.getRight());
             }
             state = State.Walking;
@@ -870,8 +878,10 @@ public class StaircasedPrinter extends Module {
         }
 
         // Main Loop for building
-        if (!state.equals(State.Walking)) return;
-        if (!atEdge) Utils.setWPressed(true);
+        if (!state.equals(State.Walking))
+            return;
+        if (!atEdge)
+            Utils.setWPressed(true);
         if (checkpoints.isEmpty()) {
             error("Checkpoints are empty. Stopping...");
             Utils.setWPressed(false);
@@ -881,7 +891,8 @@ public class StaircasedPrinter extends Module {
         Vec3d goal = checkpoints.get(0).getLeft();
         if (PlayerUtils.distanceTo(goal.add(0, mc.player.getY() - goal.y, 0)) < checkpointBuffer.get()) {
             Pair<String, BlockPos> checkpointAction = checkpoints.get(0).getRight();
-            if (debugPrints.get() && checkpointAction.getLeft() != null) info("Reached " + checkpointAction.getLeft());
+            if (debugPrints.get() && checkpointAction.getLeft() != null)
+                info("Reached " + checkpointAction.getLeft());
             checkpoints.remove(0);
             switch (checkpointAction.getLeft()) {
                 case "lineEnd":
@@ -894,14 +905,19 @@ public class StaircasedPrinter extends Module {
                     state = State.AwaitMapChestResponse;
                     return;
                 case "fillMap":
-                    mc.getNetworkHandler().sendPacket(new PlayerInteractItemC2SPacket(Hand.MAIN_HAND, Utils.getNextInteractID(), mc.player.getYaw(), mc.player.getPitch()));
+                    mc.getNetworkHandler().sendPacket(new PlayerInteractItemC2SPacket(Hand.MAIN_HAND,
+                            Utils.getNextInteractID(), mc.player.getYaw(), mc.player.getPitch()));
                     if (mapFillSquareSize.get() == 0) {
                         checkpoints.add(0, new Pair(cartographyTable.getRight(), new Pair<>("cartographyTable", null)));
                     } else {
-                        checkpoints.add(new Pair(goal.add(-mapFillSquareSize.get(), 0, mapFillSquareSize.get()), new Pair("sprint", null)));
-                        checkpoints.add(new Pair(goal.add(mapFillSquareSize.get(), 0, mapFillSquareSize.get()), new Pair("sprint", null)));
-                        checkpoints.add(new Pair(goal.add(mapFillSquareSize.get(), 0, -mapFillSquareSize.get()), new Pair("sprint", null)));
-                        checkpoints.add(new Pair(goal.add(-mapFillSquareSize.get(), 0, -mapFillSquareSize.get()), new Pair("sprint", null)));
+                        checkpoints.add(new Pair(goal.add(-mapFillSquareSize.get(), 0, mapFillSquareSize.get()),
+                                new Pair("sprint", null)));
+                        checkpoints.add(new Pair(goal.add(mapFillSquareSize.get(), 0, mapFillSquareSize.get()),
+                                new Pair("sprint", null)));
+                        checkpoints.add(new Pair(goal.add(mapFillSquareSize.get(), 0, -mapFillSquareSize.get()),
+                                new Pair("sprint", null)));
+                        checkpoints.add(new Pair(goal.add(-mapFillSquareSize.get(), 0, -mapFillSquareSize.get()),
+                                new Pair("sprint", null)));
                         checkpoints.add(new Pair(cartographyTable.getRight(), new Pair("cartographyTable", null)));
                     }
                     return;
@@ -926,7 +942,7 @@ public class StaircasedPrinter extends Module {
             }
             if (checkpoints.size() == 0) {
                 if (!arePlacementsCorrect() && errorAction.get() == ErrorAction.ToggleOff) {
-                    checkpoints.add(new Pair(mc.player.getPos(), new Pair("lineEnd", null)));
+                    checkpoints.add(new Pair(mc.player.getEntityPos(), new Pair("lineEnd", null)));
                     warning("ErrorAction is ToggleOff: Stopping because of error...");
                     toggle();
                     return;
@@ -936,7 +952,8 @@ public class StaircasedPrinter extends Module {
                 checkpoints.add(0, new Pair(bestChest.getRight(), new Pair("mapMaterialChest", bestChest.getLeft())));
                 try {
                     if (moveToFinishedFolder.get()) {
-                        mapFile.renameTo(new File(mapFile.getParentFile().getAbsolutePath() + File.separator + "_finished_maps" + File.separator + mapFile.getName()));
+                        mapFile.renameTo(new File(mapFile.getParentFile().getAbsolutePath() + File.separator
+                                + "_finished_maps" + File.separator + mapFile.getName()));
                     }
                 } catch (Exception e) {
                     warning("Failed to move map file " + mapFile.getName() + " to finished map folder");
@@ -954,41 +971,47 @@ public class StaircasedPrinter extends Module {
         } else if (sprinting.get() != SprintMode.Off) {
             mc.player.setSprinting(true);
         }
-        if (nextAction == "refill" || nextAction == "dump" || nextAction == "walkRestock") return;
+        if (nextAction == "refill" || nextAction == "dump" || nextAction == "walkRestock")
+            return;
 
         BlockPos nextPlacementPos = getNextPlacementPos(new ArrayList<BlockPos>());
-        if (nextPlacementPos == null) return;
+        if (nextPlacementPos == null)
+            return;
         mc.player.setPitch((float) Rotations.getPitch(nextPlacementPos));
 
         if (nextPlacementPos.getX() <= goal.getX() && canSee(nextPlacementPos.toCenterPos())
-            && PlayerUtils.distanceTo(nextPlacementPos.toCenterPos()) <= placeRange.get()) {
+                && PlayerUtils.distanceTo(nextPlacementPos.toCenterPos()) <= placeRange.get()) {
             tryPlacingBlock(nextPlacementPos);
         }
 
-        /*ArrayList<BlockPos> placements = new ArrayList<>();
-        BlockPos nextPlacementPos = getNextPlacementPos(placements);
-        if (nextPlacementPos == null) return;
-        mc.player.setPitch((float) Rotations.getPitch(nextPlacementPos));
-
-        for (int i = 0; i < allowedPlacements; i++) {
-            if (nextPlacementPos.getX() <= goal.getX() &&
-                PlayerUtils.distanceTo(nextPlacementPos.toCenterPos()) <= placeRange.get()) {
-                info("Fetch place direction for: "+nextPlacementPos.toShortString()+" | Ignore List: "+placements);
-                Direction placeDirection = getBestPlaceDirection(nextPlacementPos);
-                if (placeDirection != null) {
-                    if (!tryPlacingBlock(nextPlacementPos, placeDirection)) {
-                        return;
-                    }
-                    placements.add(new BlockPos(nextPlacementPos));
-                    nextPlacementPos = getNextPlacementPos(placements);
-                }
-            }
-        }*/
+        /*
+         * ArrayList<BlockPos> placements = new ArrayList<>();
+         * BlockPos nextPlacementPos = getNextPlacementPos(placements);
+         * if (nextPlacementPos == null) return;
+         * mc.player.setPitch((float) Rotations.getPitch(nextPlacementPos));
+         *
+         * for (int i = 0; i < allowedPlacements; i++) {
+         * if (nextPlacementPos.getX() <= goal.getX() &&
+         * PlayerUtils.distanceTo(nextPlacementPos.toCenterPos()) <= placeRange.get()) {
+         * info("Fetch place direction for: "+nextPlacementPos.toShortString()
+         * +" | Ignore List: "+placements);
+         * Direction placeDirection = getBestPlaceDirection(nextPlacementPos);
+         * if (placeDirection != null) {
+         * if (!tryPlacingBlock(nextPlacementPos, placeDirection)) {
+         * return;
+         * }
+         * placements.add(new BlockPos(nextPlacementPos));
+         * nextPlacementPos = getNextPlacementPos(placements);
+         * }
+         * }
+         * }
+         */
     }
 
     private int getDumpSlot() {
         HashMap<Block, Integer> requiredItems = getRequiredItems(mapCorner, availableSlots.size(), map);
-        Pair<ArrayList<Integer>, HashMap<Block, Integer>> invInformation = Utils.getInvInformation(requiredItems, availableSlots);
+        Pair<ArrayList<Integer>, HashMap<Block, Integer>> invInformation = Utils.getInvInformation(requiredItems,
+                availableSlots);
         if (invInformation.getLeft().isEmpty()) {
             return -1;
         }
@@ -999,13 +1022,16 @@ public class StaircasedPrinter extends Module {
         info("Place Block at: " + pos.toShortString());
         BlockPos relativePos = pos.subtract(mapCorner);
         Block material = map[relativePos.getX()][relativePos.getZ()].getLeft();
-        //info("Placing " + material.getName().getString() + " at: " + relativePos.toShortString());
-        //Check hot-bar slots
+        // info("Placing " + material.getName().getString() + " at: " +
+        // relativePos.toShortString());
+        // Check hot-bar slots
         for (int slot : availableHotBarSlots) {
-            if (mc.player.getInventory().getStack(slot).isEmpty()) continue;
-            Block foundMaterial = Registries.BLOCK.get(Identifier.of(mc.player.getInventory().getStack(slot).getItem().toString()));
+            if (mc.player.getInventory().getStack(slot).isEmpty())
+                continue;
+            Block foundMaterial = Registries.BLOCK
+                    .get(Identifier.of(mc.player.getInventory().getStack(slot).getItem().toString()));
             if (foundMaterial.equals(material)) {
-                //BlockUtils.place(pos, Hand.MAIN_HAND, slot, true,50, true, true, false);
+                // BlockUtils.place(pos, Hand.MAIN_HAND, slot, true,50, true, true, false);
                 InvUtils.swap(slot, false);
                 Direction direction = Direction.UP;
                 Vec3d hitPos = pos.toCenterPos().add(0, -0.5, 0);
@@ -1026,13 +1052,16 @@ public class StaircasedPrinter extends Module {
                     InvUtils.swapBack();
                 });
 
-                if (material == lastSwappedMaterial) lastSwappedMaterial = null;
+                if (material == lastSwappedMaterial)
+                    lastSwappedMaterial = null;
                 return true;
             }
         }
         for (int slot : availableSlots) {
-            if (mc.player.getInventory().getStack(slot).isEmpty() || availableHotBarSlots.contains(slot)) continue;
-            Block foundMaterial = Registries.BLOCK.get(Identifier.of(mc.player.getInventory().getStack(slot).getItem().toString()));
+            if (mc.player.getInventory().getStack(slot).isEmpty() || availableHotBarSlots.contains(slot))
+                continue;
+            Block foundMaterial = Registries.BLOCK
+                    .get(Identifier.of(mc.player.getInventory().getStack(slot).getItem().toString()));
             if (foundMaterial.equals(material)) {
                 lastSwappedMaterial = material;
                 toBeSwappedSlot = slot;
@@ -1042,11 +1071,13 @@ public class StaircasedPrinter extends Module {
                 return false;
             }
         }
-        if (lastSwappedMaterial == material) return false;      //Wait for swapped material
+        if (lastSwappedMaterial == material)
+            return false; // Wait for swapped material
         info("No " + material.getName().getString() + " found in inventory. Resetting...");
         mc.player.setVelocity(0, 0, 0);
-        Vec3d pathCheckpoint = new Vec3d(mc.player.getX(), mapCorner.toCenterPos().getY(), mapCorner.north().toCenterPos().getZ());
-        checkpoints.add(0, new Pair(mc.player.getPos(), new Pair("walkRestock", null)));
+        Vec3d pathCheckpoint = new Vec3d(mc.player.getX(), mapCorner.toCenterPos().getY(),
+                mapCorner.north().toCenterPos().getZ());
+        checkpoints.add(0, new Pair(mc.player.getEntityPos(), new Pair("walkRestock", null)));
         checkpoints.add(0, new Pair(pathCheckpoint, new Pair("walkRestock", null)));
         checkpoints.add(0, new Pair(dumpStation.getLeft(), new Pair("dump", null)));
         checkpoints.add(0, new Pair(pathCheckpoint, new Pair("walkRestock", null)));
@@ -1057,7 +1088,8 @@ public class StaircasedPrinter extends Module {
         for (int x = 0; x < 128; x++) {
             for (int z = 0; z < 128; z++) {
                 BlockPos blockPos = mapCorner.add(x, map[x][z].getRight(), z);
-                if (ignoreList.contains(blockPos)) continue;
+                if (ignoreList.contains(blockPos))
+                    continue;
                 BlockState blockState = MapAreaCache.getCachedBlockState(blockPos);
                 if (blockState.isAir()) {
                     return blockPos;
@@ -1069,7 +1101,7 @@ public class StaircasedPrinter extends Module {
 
     private boolean canSee(Vec3d pos) {
         RaycastContext raycastContext = new RaycastContext(mc.player.getEyePos(), pos, RaycastContext.ShapeType.OUTLINE,
-            RaycastContext.FluidHandling.NONE, mc.player);
+                RaycastContext.FluidHandling.NONE, mc.player);
         HitResult hitResult = mc.world.raycast(raycastContext);
         return hitResult.getPos().equals(pos);
     }
@@ -1077,7 +1109,7 @@ public class StaircasedPrinter extends Module {
     private void endRestocking() {
         if (restockList.get(0).getMiddle() > 0) {
             warning("Not all necessary stacks restocked. Searching for another chest...");
-            //Search for the next best chest
+            // Search for the next best chest
             checkedChests.add(lastInteractedChest);
             Pair<BlockPos, Vec3d> bestRestockPos = getBestChest(getMaterialFromPos(lastInteractedChest));
             checkpoints.add(0, new Pair<>(bestRestockPos.getRight(), new Pair<>("refill", bestRestockPos.getLeft())));
@@ -1103,10 +1135,11 @@ public class StaircasedPrinter extends Module {
             toggle();
             return new Pair<>(new BlockPos(0, 0, 0), new Vec3d(0, 0, 0));
         }
-        //Get nearest chest
+        // Get nearest chest
         for (Pair<BlockPos, Vec3d> p : list) {
-            //Skip chests that have already been checked
-            if (checkedChests.contains(p.getLeft())) continue;
+            // Skip chests that have already been checked
+            if (checkedChests.contains(p.getLeft()))
+                continue;
             if (bestPos == null || PlayerUtils.distanceTo(p.getRight()) < PlayerUtils.distanceTo(bestPos)) {
                 bestPos = p.getRight();
                 bestChestPos = p.getLeft();
@@ -1125,10 +1158,11 @@ public class StaircasedPrinter extends Module {
         mc.player.setYaw((float) Rotations.getYaw(chestPos.toCenterPos()));
         mc.player.setPitch((float) Rotations.getPitch(chestPos.toCenterPos()));
 
-        BlockHitResult hitResult = new BlockHitResult(chestPos.toCenterPos(), Utils.getInteractionSide(chestPos), chestPos, false);
+        BlockHitResult hitResult = new BlockHitResult(chestPos.toCenterPos(), Utils.getInteractionSide(chestPos),
+                chestPos, false);
         BlockUtils.interact(hitResult, Hand.MAIN_HAND, true);
 
-        //Set timeout for chest interaction
+        // Set timeout for chest interaction
         interactTimeout = retryInteractTimer.get();
         lastInteractedChest = chestPos;
     }
@@ -1144,13 +1178,15 @@ public class StaircasedPrinter extends Module {
 
     private boolean isWithingMap(BlockPos pos) {
         BlockPos relativePos = pos.subtract(mapCorner);
-        return relativePos.getX() >= 0 && relativePos.getX() < map.length && relativePos.getZ() >= 0 && relativePos.getZ() < map[0].length;
+        return relativePos.getX() >= 0 && relativePos.getX() < map.length && relativePos.getZ() >= 0
+                && relativePos.getZ() < map[0].length;
     }
 
     private Block getMaterialFromPos(BlockPos pos) {
         for (Block material : materialDict.keySet()) {
             for (Pair<BlockPos, Vec3d> p : materialDict.get(material)) {
-                if (p.getLeft().equals(pos)) return material;
+                if (p.getLeft().equals(pos))
+                    return material;
             }
         }
         warning("Could not find material for chest position : " + pos.toShortString());
@@ -1183,14 +1219,14 @@ public class StaircasedPrinter extends Module {
         try {
             NbtSizeTracker sizeTracker = new NbtSizeTracker(0x20000000L, 100);
             NbtCompound nbt = NbtIo.readCompressed(mapFile.toPath(), sizeTracker);
-            //Extracting the palette
+            // Extracting the palette
             NbtList paletteList = (NbtList) nbt.get("palette");
             blockPaletteDict = Utils.getBlockPalette(paletteList);
 
             NbtList blockList = (NbtList) nbt.get("blocks");
             map = generateMapArray(blockList);
 
-            //Check if a full 128x128 map is present
+            // Check if a full 128x128 map is present
             for (int x = 0; x < map.length; x++) {
                 for (int z = 0; z < map[x].length; z++) {
                     if (map[x][z] == null) {
@@ -1211,12 +1247,14 @@ public class StaircasedPrinter extends Module {
         Pair<Block, Integer>[][] absoluteHeightMap = new Pair[128][129];
         for (int i = 0; i < blockList.size(); i++) {
             Optional<NbtCompound> blockOpt = blockList.getCompound(i);
-            if (blockOpt.isEmpty()) continue;
+            if (blockOpt.isEmpty())
+                continue;
 
             NbtCompound block = blockOpt.get();
 
             Optional<Integer> blockIdOpt = block.getInt("state");
-            if (blockIdOpt.isEmpty() || !blockPaletteDict.containsKey(blockIdOpt.get())) continue;
+            if (blockIdOpt.isEmpty() || !blockPaletteDict.containsKey(blockIdOpt.get()))
+                continue;
 
             int blockId = blockIdOpt.get();
 
@@ -1237,7 +1275,8 @@ public class StaircasedPrinter extends Module {
                 absoluteHeightMap[x][z] = new Pair<>(material, y);
             }
             if (z > 0) {
-                blockPaletteDict.put(blockId, new Pair(blockPaletteDict.get(blockId).getLeft(), blockPaletteDict.get(blockId).getRight()+1));
+                blockPaletteDict.put(blockId, new Pair(blockPaletteDict.get(blockId).getLeft(),
+                        blockPaletteDict.get(blockId).getRight() + 1));
             }
         }
         // Smooth the y pos out to max 1 block difference
@@ -1245,28 +1284,32 @@ public class StaircasedPrinter extends Module {
         for (int x = 0; x < absoluteHeightMap.length; x++) {
             int totalYDiff = 0;
             for (int z = 1; z < absoluteHeightMap[0].length; z++) {
-                int predecessorY = absoluteHeightMap[x][z-1].getRight();
+                int predecessorY = absoluteHeightMap[x][z - 1].getRight();
                 int currentY = absoluteHeightMap[x][z].getRight();
                 totalYDiff += Math.max(-1, Math.min(currentY - predecessorY, 1));
-                smoothedHeightMap[x][z-1] = new Pair<>(absoluteHeightMap[x][z].getLeft(), totalYDiff);
+                smoothedHeightMap[x][z - 1] = new Pair<>(absoluteHeightMap[x][z].getLeft(), totalYDiff);
             }
         }
         return smoothedHeightMap;
     }
 
-    public HashMap<Block, Integer> getRequiredItems(BlockPos mapCorner, int availableSlotsSize, Pair<Block, Integer>[][] map) {
-        //Calculate the next items to restock
-        //Iterate over map. Player has to be able to see the complete map area
+    public HashMap<Block, Integer> getRequiredItems(BlockPos mapCorner, int availableSlotsSize,
+            Pair<Block, Integer>[][] map) {
+        // Calculate the next items to restock
+        // Iterate over map. Player has to be able to see the complete map area
         HashMap<Block, Integer> requiredItems = new HashMap<>();
         for (int x = 0; x < 128; x++) {
             for (int z = 0; z < 128; z++) {
                 BlockState blockState = MapAreaCache.getCachedBlockState(mapCorner.add(x, map[x][z].getRight(), z));
                 if (blockState.isAir() && map[x][z] != null) {
-                    //ChatUtils.info("Add material for: " + mapCorner.add(x + lineBonus, 0, adjustedZ).toShortString());
+                    // ChatUtils.info("Add material for: " + mapCorner.add(x + lineBonus, 0,
+                    // adjustedZ).toShortString());
                     Block material = map[x][z].getLeft();
-                    if (!requiredItems.containsKey(material)) requiredItems.put(material, 0);
+                    if (!requiredItems.containsKey(material))
+                        requiredItems.put(material, 0);
                     requiredItems.put(material, requiredItems.get(material) + 1);
-                    //Check if the item fits into inventory. If not, undo the last increment and return
+                    // Check if the item fits into inventory. If not, undo the last increment and
+                    // return
                     if (Utils.stacksRequired(requiredItems) > availableSlotsSize) {
                         requiredItems.put(material, requiredItems.get(material) - 1);
                         return requiredItems;
@@ -1279,9 +1322,11 @@ public class StaircasedPrinter extends Module {
 
     @EventHandler
     private void onRender(Render3DEvent event) {
-        if (mapCorner == null || !render.get()) return;
+        if (mapCorner == null || !render.get())
+            return;
 
-        event.renderer.box(mapCorner.getX(), mapCorner.getY(), mapCorner.getZ(), mapCorner.getX() + 128, mapCorner.getY(), mapCorner.getZ() + 128, color.get(), color.get(), ShapeMode.Lines, 0);
+        event.renderer.box(mapCorner.getX(), mapCorner.getY(), mapCorner.getZ(), mapCorner.getX() + 128,
+                mapCorner.getY(), mapCorner.getZ() + 128, color.get(), color.get(), ShapeMode.Lines, 0);
 
         if (renderMap.get()) {
             for (int x = 0; x < map.length; x++) {
@@ -1302,36 +1347,73 @@ public class StaircasedPrinter extends Module {
                 event.renderer.box(pair.getLeft(), color.get(), color.get(), ShapeMode.Lines, 0);
             if (renderOpenPositions.get()) {
                 Vec3d openPos = pair.getRight();
-                event.renderer.box(openPos.x - indicatorSize.get(), openPos.y - indicatorSize.get(), openPos.z - indicatorSize.get(), openPos.x + indicatorSize.get(), openPos.y + indicatorSize.get(), openPos.z + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
+                event.renderer.box(openPos.x - indicatorSize.get(), openPos.y - indicatorSize.get(),
+                        openPos.z - indicatorSize.get(), openPos.x + indicatorSize.get(),
+                        openPos.y + indicatorSize.get(), openPos.z + indicatorSize.get(), color.get(), color.get(),
+                        ShapeMode.Both, 0);
             }
         }
 
         if (renderCheckpoints.get()) {
             for (Pair<Vec3d, Pair<String, BlockPos>> pair : checkpoints) {
                 Vec3d cp = pair.getLeft();
-                event.renderer.box(cp.x - indicatorSize.get(), cp.y - indicatorSize.get(), cp.z - indicatorSize.get(), cp.getX() + indicatorSize.get(), cp.getY() + indicatorSize.get(), cp.getZ() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
+                event.renderer.box(cp.x - indicatorSize.get(), cp.y - indicatorSize.get(), cp.z - indicatorSize.get(),
+                        cp.getX() + indicatorSize.get(), cp.getY() + indicatorSize.get(),
+                        cp.getZ() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
             }
         }
 
         if (renderSpecialInteractions.get()) {
             if (pickaxeChest != null) {
                 event.renderer.box(pickaxeChest.getLeft().getBlockPos(), color.get(), color.get(), ShapeMode.Lines, 0);
-                event.renderer.box(pickaxeChest.getRight().x - indicatorSize.get(), pickaxeChest.getRight().y - indicatorSize.get(), pickaxeChest.getRight().z - indicatorSize.get(), pickaxeChest.getRight().getX() + indicatorSize.get(), pickaxeChest.getRight().getY() + indicatorSize.get(), pickaxeChest.getRight().getZ() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
+                event.renderer.box(pickaxeChest.getRight().x - indicatorSize.get(),
+                        pickaxeChest.getRight().y - indicatorSize.get(),
+                        pickaxeChest.getRight().z - indicatorSize.get(),
+                        pickaxeChest.getRight().getX() + indicatorSize.get(),
+                        pickaxeChest.getRight().getY() + indicatorSize.get(),
+                        pickaxeChest.getRight().getZ() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both,
+                        0);
             }
             if (usedPickaxeChest != null) {
-                event.renderer.box(usedPickaxeChest.getLeft().getBlockPos(), color.get(), color.get(), ShapeMode.Lines, 0);
-                event.renderer.box(usedPickaxeChest.getRight().x - indicatorSize.get(), usedPickaxeChest.getRight().y - indicatorSize.get(), usedPickaxeChest.getRight().z - indicatorSize.get(), usedPickaxeChest.getRight().getX() + indicatorSize.get(), usedPickaxeChest.getRight().getY() + indicatorSize.get(), usedPickaxeChest.getRight().getZ() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
+                event.renderer.box(usedPickaxeChest.getLeft().getBlockPos(), color.get(), color.get(), ShapeMode.Lines,
+                        0);
+                event.renderer.box(usedPickaxeChest.getRight().x - indicatorSize.get(),
+                        usedPickaxeChest.getRight().y - indicatorSize.get(),
+                        usedPickaxeChest.getRight().z - indicatorSize.get(),
+                        usedPickaxeChest.getRight().getX() + indicatorSize.get(),
+                        usedPickaxeChest.getRight().getY() + indicatorSize.get(),
+                        usedPickaxeChest.getRight().getZ() + indicatorSize.get(), color.get(), color.get(),
+                        ShapeMode.Both, 0);
             }
             if (cartographyTable != null) {
-                event.renderer.box(cartographyTable.getLeft().getBlockPos(), color.get(), color.get(), ShapeMode.Lines, 0);
-                event.renderer.box(cartographyTable.getRight().x - indicatorSize.get(), cartographyTable.getRight().y - indicatorSize.get(), cartographyTable.getRight().z - indicatorSize.get(), cartographyTable.getRight().getX() + indicatorSize.get(), cartographyTable.getRight().getY() + indicatorSize.get(), cartographyTable.getRight().getZ() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
+                event.renderer.box(cartographyTable.getLeft().getBlockPos(), color.get(), color.get(), ShapeMode.Lines,
+                        0);
+                event.renderer.box(cartographyTable.getRight().x - indicatorSize.get(),
+                        cartographyTable.getRight().y - indicatorSize.get(),
+                        cartographyTable.getRight().z - indicatorSize.get(),
+                        cartographyTable.getRight().getX() + indicatorSize.get(),
+                        cartographyTable.getRight().getY() + indicatorSize.get(),
+                        cartographyTable.getRight().getZ() + indicatorSize.get(), color.get(), color.get(),
+                        ShapeMode.Both, 0);
             }
             if (dumpStation != null) {
-                event.renderer.box(dumpStation.getLeft().x - indicatorSize.get(), dumpStation.getLeft().y - indicatorSize.get(), dumpStation.getLeft().z - indicatorSize.get(), dumpStation.getLeft().getX() + indicatorSize.get(), dumpStation.getLeft().getY() + indicatorSize.get(), dumpStation.getLeft().getZ() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
+                event.renderer.box(dumpStation.getLeft().x - indicatorSize.get(),
+                        dumpStation.getLeft().y - indicatorSize.get(), dumpStation.getLeft().z - indicatorSize.get(),
+                        dumpStation.getLeft().getX() + indicatorSize.get(),
+                        dumpStation.getLeft().getY() + indicatorSize.get(),
+                        dumpStation.getLeft().getZ() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both,
+                        0);
             }
             if (finishedMapChest != null) {
-                event.renderer.box(finishedMapChest.getLeft().getBlockPos(), color.get(), color.get(), ShapeMode.Lines, 0);
-                event.renderer.box(finishedMapChest.getRight().x - indicatorSize.get(), finishedMapChest.getRight().y - indicatorSize.get(), finishedMapChest.getRight().z - indicatorSize.get(), finishedMapChest.getRight().getX() + indicatorSize.get(), finishedMapChest.getRight().getY() + indicatorSize.get(), finishedMapChest.getRight().getZ() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
+                event.renderer.box(finishedMapChest.getLeft().getBlockPos(), color.get(), color.get(), ShapeMode.Lines,
+                        0);
+                event.renderer.box(finishedMapChest.getRight().x - indicatorSize.get(),
+                        finishedMapChest.getRight().y - indicatorSize.get(),
+                        finishedMapChest.getRight().z - indicatorSize.get(),
+                        finishedMapChest.getRight().getX() + indicatorSize.get(),
+                        finishedMapChest.getRight().getY() + indicatorSize.get(),
+                        finishedMapChest.getRight().getZ() + indicatorSize.get(), color.get(), color.get(),
+                        ShapeMode.Both, 0);
             }
         }
     }
