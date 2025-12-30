@@ -142,7 +142,6 @@ public class CarpetPrinter extends Module {
             .name("nerv-printer-folder-path")
             .description("The path to your nerv-printer directory.")
             .defaultValue("C:\\Users\\(username)\\AppData\\Roaming\\.minecraft\\nerv-printer")
-            .wide()
             .renderer(StarscriptTextBoxRenderer.class)
             .visible(() -> customFolderPath.get())
             .build());
@@ -312,6 +311,7 @@ public class CarpetPrinter extends Module {
             .defaultValue(new SettingColor(22, 230, 206, 155))
             .visible(() -> render.get())
             .build());
+
     int timeoutTicks;
     int closeResetChestTicks;
     int interactTimeout;
