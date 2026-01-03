@@ -562,7 +562,7 @@ public class CarpetPrinter extends Module {
                         warning("No Map Chests selected!");
                         return;
                     }
-                    Utils.setWPressed(true);
+                    Utils.setForwardPressed(true);
                     calculateBuildingPath(startCornerSide.get(), true);
                     availableSlots = Utils.getAvailableSlots(materialDict);
                     for (int slot : availableSlots) {
@@ -605,6 +605,7 @@ public class CarpetPrinter extends Module {
 
         if (event.packet instanceof PlayerPositionLookS2CPacket) {
             timeoutTicks = posResetTimeout.get();
+            if (timeoutTicks > 0) Utils.setForwardPressed(false);
         }
 
         if (!(event.packet instanceof InventoryS2CPacket packet)) return;
@@ -635,9 +636,9 @@ public class CarpetPrinter extends Module {
             }
             if (isMixedContent) {
                 warning("Different items found in chest. Please only have one item type in the chest.");
+                state = State.SelectingChests;
                 return;
             }
-
             Block chestContentBlock = Registries.BLOCK.get(Identifier.of(foundItem.toString()));
             info("Registered §a" + chestContentBlock.getName().getString());
             if (!materialDict.containsKey(chestContentBlock)) materialDict.put(chestContentBlock, new ArrayList<>());
@@ -907,10 +908,10 @@ public class CarpetPrinter extends Module {
 
         // Main Loop for building
         if (!state.equals(State.Walking)) return;
-        Utils.setWPressed(true);
+        Utils.setForwardPressed(true);
         if (checkpoints.isEmpty()) {
             error("Checkpoints are empty. Stopping...");
-            Utils.setWPressed(false);
+            Utils.setForwardPressed(false);
             toggle();
             return;
         }
@@ -978,7 +979,7 @@ public class CarpetPrinter extends Module {
                     return;
                 case "dump":
                     state = State.Dumping;
-                    Utils.setWPressed(false);
+                    Utils.setForwardPressed(false);
                     mc.player.setYaw(dumpStation.getRight().getLeft());
                     mc.player.setPitch(dumpStation.getRight().getRight());
                     return;
@@ -988,12 +989,12 @@ public class CarpetPrinter extends Module {
                     return;
                 case "awaitClear":
                     state = State.AwaitAreaClear;
-                    Utils.setWPressed(false);
+                    Utils.setForwardPressed(false);
                     return;
                 case "repair":
                     state = State.AwaitBlockBreak;
                     repairingPos = checkpointAction.getRight();
-                    Utils.setWPressed(false);
+                    Utils.setForwardPressed(false);
                     mc.player.setVelocity(0, 0, 0);
                     if (rotate.get())
                         Rotations.rotate(Rotations.getYaw(repairingPos), Rotations.getPitch(repairingPos), 50);
@@ -1006,7 +1007,7 @@ public class CarpetPrinter extends Module {
                     if (errorAction.get() == ErrorAction.ToggleOff) {
                         checkpoints.add(new Pair(mc.player.getPos(), new Pair("lineEnd", null)));
                         warning("ErrorAction is ToggleOff: Stopping because of an error...");
-                        Utils.setWPressed(false);
+                        Utils.setForwardPressed(false);
                         toggle();
                         return;
                     }
@@ -1104,7 +1105,7 @@ public class CarpetPrinter extends Module {
             if (foundMaterial.equals(material)) {
                 lastSwappedMaterial = material;
                 toBeSwappedSlot = slot;
-                Utils.setWPressed(false);
+                Utils.setForwardPressed(false);
                 mc.player.setVelocity(0, 0, 0);
                 timeoutTicks = preSwapDelay.get();
                 return false;
@@ -1164,7 +1165,7 @@ public class CarpetPrinter extends Module {
     }
 
     private void interactWithBlock(BlockPos chestPos) {
-        Utils.setWPressed(false);
+        Utils.setForwardPressed(false);
         mc.player.setVelocity(0, 0, 0);
         mc.player.setYaw((float) Rotations.getYaw(chestPos.toCenterPos()));
         mc.player.setPitch((float) Rotations.getPitch(chestPos.toCenterPos()));
@@ -1177,7 +1178,7 @@ public class CarpetPrinter extends Module {
     }
 
     private void interactWithBlock(BlockHitResult hitResult) {
-        Utils.setWPressed(false);
+        Utils.setForwardPressed(false);
         mc.player.setVelocity(0, 0, 0);
         mc.player.setYaw((float) Rotations.getYaw(hitResult.getBlockPos().toCenterPos()));
         mc.player.setPitch((float) Rotations.getPitch(hitResult.getBlockPos().toCenterPos()));

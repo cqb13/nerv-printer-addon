@@ -50,10 +50,10 @@ public class Utils {
         return list;
     }
 
-    public static int stacksRequired(HashMap<Block, Integer> requiredItems) {
-        //Calculates how many slots are required for the dictionary {Block: Amount}
+    public static int stacksRequired(Collection<Integer> amounts) {
+        //Calculates how many slots are required for the set of item amounts
         int stacks = 0;
-        for (int amount : requiredItems.values()) {
+        for (int amount : amounts) {
             if (amount == 0) continue;
             stacks += Math.ceil((float) amount / 64f);
         }
@@ -93,7 +93,7 @@ public class Utils {
                         if (!requiredItems.containsKey(material)) requiredItems.put(material, 0);
                         requiredItems.put(material, requiredItems.get(material) + 1);
                         //Check if the item fits into inventory. If not, undo the last increment and return
-                        if (stacksRequired(requiredItems) > availableSlotsSize) {
+                        if (stacksRequired(requiredItems.values()) > availableSlotsSize) {
                             requiredItems.put(material, requiredItems.get(material) - 1);
                             return requiredItems;
                         }
@@ -165,9 +165,19 @@ public class Utils {
         return (int) Math.floor((float) (pos + 64) / 128f) * 128 - 64;
     }
 
-    public static void setWPressed(boolean pressed) {
+    public static void setForwardPressed(boolean pressed) {
         mc.options.forwardKey.setPressed(pressed);
         Input.setKeyState(mc.options.forwardKey, pressed);
+    }
+
+    public static void setBackwardPressed(boolean pressed) {
+        mc.options.backKey.setPressed(pressed);
+        Input.setKeyState(mc.options.backKey, pressed);
+    }
+
+    public static void setJumpPressed(boolean pressed) {
+        mc.options.jumpKey.setPressed(pressed);
+        Input.setKeyState(mc.options.jumpKey, pressed);
     }
 
     public static int findHighestFreeSlot(InventoryS2CPacket packet) {

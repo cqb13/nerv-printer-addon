@@ -564,7 +564,7 @@ public class FullBlockPrinter extends Module {
             if (MapAreaCache.getCachedBlockState(mc.player.getBlockPos().down()).isAir() && state == State.Walking &&
                 (checkpoints.get(0).getRight().getLeft() == "" || checkpoints.get(0).getRight().getLeft() == "lineEnd")) {
                 atEdge = true;
-                Utils.setWPressed(false);
+                Utils.setForwardPressed(false);
                 mc.player.setVelocity(0, 0, 0);
             } else {
                 atEdge = false;
@@ -635,7 +635,7 @@ public class FullBlockPrinter extends Module {
                         warning("No Map Chests selected!");
                         return;
                     }
-                    Utils.setWPressed(true);
+                    Utils.setForwardPressed(true);
                     calculateBuildingPath(true, true);
                     availableSlots = Utils.getAvailableSlots(materialDict);
                     for (int slot : availableSlots) {
@@ -678,6 +678,7 @@ public class FullBlockPrinter extends Module {
 
         if (event.packet instanceof PlayerPositionLookS2CPacket) {
             timeoutTicks = posResetTimeout.get();
+            if (timeoutTicks > 0) Utils.setForwardPressed(false);
         }
 
         if (!(event.packet instanceof InventoryS2CPacket packet)) return;
@@ -703,9 +704,9 @@ public class FullBlockPrinter extends Module {
             }
             if (isMixedContent) {
                 warning("Different items found in chest. Please only have one item type in the chest.");
+                state = State.SelectingChests;
                 return;
             }
-
             if (foundItem == null) {
                 warning("No items found in chest.");
                 state = State.SelectingChests;
@@ -972,7 +973,7 @@ public class FullBlockPrinter extends Module {
             if (PlayerUtils.distanceTo(targetPos) > 0.9) {
                 checkpoints.add(0, new Pair<>(targetPos, new Pair<>("switchAvoidTNT", null)));
                 state = State.Walking;
-                Utils.setWPressed(true);
+                Utils.setForwardPressed(true);
             }
             return;
         }
@@ -1005,10 +1006,10 @@ public class FullBlockPrinter extends Module {
 
         // Main Loop for building
         if (!state.equals(State.Walking)) return;
-        if (!atEdge) Utils.setWPressed(true);
+        if (!atEdge) Utils.setForwardPressed(true);
         if (checkpoints.isEmpty()) {
             error("Checkpoints are empty. Stopping...");
-            Utils.setWPressed(false);
+            Utils.setForwardPressed(false);
             toggle();
             return;
         }
@@ -1061,7 +1062,7 @@ public class FullBlockPrinter extends Module {
                     return;
                 case "switchAvoidTNT":
                     state = State.AvoidTNT;
-                    Utils.setWPressed(false);
+                    Utils.setForwardPressed(false);
                     return;
                 case "finishedAvoid":
                     calculateBuildingPath(true, true);
@@ -1069,7 +1070,7 @@ public class FullBlockPrinter extends Module {
                     return;
                 case "dump":
                     state = State.Dumping;
-                    Utils.setWPressed(false);
+                    Utils.setForwardPressed(false);
                     mc.player.setYaw(dumpStation.getRight().getLeft());
                     mc.player.setPitch(dumpStation.getRight().getRight());
                     return;
@@ -1173,7 +1174,7 @@ public class FullBlockPrinter extends Module {
             if (foundMaterial.equals(material)) {
                 lastSwappedMaterial = material;
                 toBeSwappedSlot = slot;
-                Utils.setWPressed(false);
+                Utils.setForwardPressed(false);
                 mc.player.setVelocity(0, 0, 0);
                 timeoutTicks = preSwapDelay.get();
                 return false;
@@ -1238,7 +1239,7 @@ public class FullBlockPrinter extends Module {
     }
 
     private void interactWithBlock(BlockPos chestPos) {
-        Utils.setWPressed(false);
+        Utils.setForwardPressed(false);
         mc.player.setVelocity(0, 0, 0);
         mc.player.setYaw((float) Rotations.getYaw(chestPos.toCenterPos()));
         mc.player.setPitch((float) Rotations.getPitch(chestPos.toCenterPos()));
@@ -1251,7 +1252,7 @@ public class FullBlockPrinter extends Module {
     }
 
     private void interactWithBlock(BlockHitResult hitResult) {
-        Utils.setWPressed(false);
+        Utils.setForwardPressed(false);
         mc.player.setVelocity(0, 0, 0);
         mc.player.setYaw((float) Rotations.getYaw(hitResult.getBlockPos().toCenterPos()));
         mc.player.setPitch((float) Rotations.getPitch(hitResult.getBlockPos().toCenterPos()));
