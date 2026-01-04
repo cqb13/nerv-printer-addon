@@ -27,10 +27,8 @@ import net.minecraft.nbt.NbtSizeTracker;
 import net.minecraft.network.packet.c2s.play.*;
 import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
 import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.registry.Registries;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.util.Hand;
-import net.minecraft.util.Identifier;
 import net.minecraft.util.Pair;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
@@ -667,7 +665,7 @@ public class FullBlockPrinter extends Module {
                 }
                 if (MapAreaCache.getCachedBlockState(blockPos).getBlock().equals(Blocks.CHEST)) {
                     tempChestPos = blockPos;
-                    state = State.AwaitContent;
+                    state = State.AwaitRegisterResponse;
                 }
                 break;
         }
@@ -684,7 +682,7 @@ public class FullBlockPrinter extends Module {
 
         if (!(event.packet instanceof InventoryS2CPacket packet)) return;
 
-        if (state.equals(State.AwaitContent)) {
+        if (state.equals(State.AwaitRegisterResponse)) {
             //info("Chest content received.");
             Item foundItem = null;
             boolean isMixedContent = false;
@@ -1379,7 +1377,6 @@ public class FullBlockPrinter extends Module {
     }
 
     private enum State {
-        AwaitContent,
         SelectingNorthReset,
         SelectingSouthReset,
         SelectingChests,
@@ -1387,6 +1384,7 @@ public class FullBlockPrinter extends Module {
         SelectingDumpStation,
         SelectingTable,
         SelectingMapArea,
+        AwaitRegisterResponse,
         AwaitRestockResponse,
         AwaitResetResponse,
         AwaitMapChestResponse,

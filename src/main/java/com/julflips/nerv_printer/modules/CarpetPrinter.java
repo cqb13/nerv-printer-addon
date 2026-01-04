@@ -1,12 +1,20 @@
 package com.julflips.nerv_printer.modules;
 
 import com.julflips.nerv_printer.Addon;
+import com.julflips.nerv_printer.utils.ConfigDeserializer;
+import com.julflips.nerv_printer.utils.ConfigSerializer;
 import com.julflips.nerv_printer.utils.MapAreaCache;
 import com.julflips.nerv_printer.utils.Utils;
 import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.render.Render3DEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
+import meteordevelopment.meteorclient.gui.GuiTheme;
 import meteordevelopment.meteorclient.gui.utils.StarscriptTextBoxRenderer;
+import meteordevelopment.meteorclient.gui.widgets.WLabel;
+import meteordevelopment.meteorclient.gui.widgets.WWidget;
+import meteordevelopment.meteorclient.gui.widgets.containers.WTable;
+import meteordevelopment.meteorclient.gui.widgets.containers.WVerticalList;
+import meteordevelopment.meteorclient.gui.widgets.pressable.WButton;
 import meteordevelopment.meteorclient.renderer.ShapeMode;
 import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.modules.Module;
@@ -36,8 +44,10 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Vec3d;
 import org.apache.commons.lang3.tuple.Triple;
+import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -380,6 +390,58 @@ public class CarpetPrinter extends Module {
     }
 
     @Override
+    public WWidget getWidget(GuiTheme theme) {
+        WVerticalList list = theme.verticalList();
+        WTable table = new WTable();
+        list.add(table);
+
+        // ---- Multi-user section ----
+        table.add(theme.label("Multi-User: "));
+        WButton startButton = table.add(theme.button("Register Clients")).widget();
+        startButton.action = () -> info("Register Clients");
+        table.row();
+
+        // ---- File selection section ----
+        File configFolder = new File(mapFolder, "_configs");
+        if (!configFolder.exists()) configFolder.mkdirs();
+        WButton selectFile = table.add(theme.button("Select File")).widget();
+        WLabel fileName = table.add(theme.label(
+            (configFile != null)
+                ? configFile.getName()
+                : "No file selected."
+        )).widget();
+        table.row();
+        selectFile.action = () -> {
+            String path = TinyFileDialogs.tinyfd_openFileDialog(
+                "Select Config File",
+                new File(configFolder, "carpet-printer-config.json").getAbsolutePath(),
+                null,
+                null,
+                false
+            );
+
+            if (path != null) {
+                configFile = new File(path);
+                fileName.set(configFile.getName());
+            }
+        };
+
+        // ---- Save config button ----
+        WButton saveButton = table.add(theme.button("Save Config")).widget();
+        table.add(theme.label(""));
+        table.row();
+        saveButton.action = () -> saveConfig();
+
+        // ---- Load config button ----
+        WButton loadButton = table.add(theme.button("Load Config")).widget();
+        table.add(theme.label(""));
+        table.row();
+        loadButton.action = () -> loadConfig();
+
+        return list;
+    }
+
+    @Override
     public void onActivate() {
         lastTickTime = System.currentTimeMillis();
         if (!activationReset.get() && checkpoints != null) {
@@ -592,7 +654,7 @@ public class CarpetPrinter extends Module {
                 }
                 if (blockState.getBlock().equals(Blocks.CHEST)) {
                     tempChestPos = blockPos;
-                    state = State.AwaitContent;
+                    state = State.AwaitRegisterResponse;
                 }
                 break;
         }
@@ -609,7 +671,7 @@ public class CarpetPrinter extends Module {
 
         if (!(event.packet instanceof InventoryS2CPacket packet)) return;
 
-        if (state.equals(State.AwaitContent)) {
+        if (state.equals(State.AwaitRegisterResponse)) {
             //info("Chest content received.");
             Item foundItem = null;
             boolean isMixedContent = false;
@@ -1285,14 +1347,87 @@ public class CarpetPrinter extends Module {
         }
     }
 
+    private void saveConfig() {
+        if (configFile == null) {
+            error("No config file name selected.");
+            return;
+        }
+        if (reset == null || cartographyTable == null || finishedMapChest == null || dumpStation == null || mapCorner == null || materialDict.isEmpty()) {
+            error("Cannot save config: Missing required data.");
+            return;
+        }
+        try {
+            ConfigSerializer.writeToJson(
+                configFile.toPath(),
+                "carpet",
+                reset,
+                cartographyTable,
+                finishedMapChest,
+                mapMaterialChests,
+                dumpStation,
+                mapCorner,
+                materialDict);
+            info("Config saved to " + configFile.getAbsolutePath());
+        } catch (IOException e) {
+            error("Failed to create config file.");
+        }
+    }
+
+    private void loadConfig() {
+        if (configFile == null || !configFile.exists()) {
+            error("No config file selected.");
+            return;
+        }
+        List<State> allowedStates = List.of(
+            State.SelectingReset,
+            State.SelectingChests,
+            State.SelectingFinishedMapChest,
+            State.SelectingDumpStation,
+            State.SelectingTable,
+            State.SelectingMapArea,
+            State.AwaitRegisterResponse
+        );
+        if (!allowedStates.contains(state)) {
+            error("Can only load config during the registration phase.");
+            return;
+        }
+
+        try {
+            ConfigDeserializer.ConfigData data =
+                ConfigDeserializer.readFromJson(configFile.toPath());
+
+            if (!data.type.equals("carpet")) {
+                error("Config file is of type "+ data.type +" and not 'carpet'.");
+                return;
+            }
+            if (data.reset == null || data.cartographyTable == null || data.finishedMapChest == null || data.dumpStation == null || data.mapCorner == null || data.materialDict.isEmpty()) {
+                error("Config file is missing required data.");
+                return;
+            }
+            this.reset = data.reset;
+            this.cartographyTable = data.cartographyTable;
+            this.finishedMapChest = data.finishedMapChest;
+            this.mapMaterialChests = data.mapMaterialChests;
+            this.dumpStation = data.dumpStation;
+            this.mapCorner = data.mapCorner;
+            MapAreaCache.reset(mapCorner);
+            this.materialDict = data.materialDict;
+            info("Config loaded from " + configFile.getAbsolutePath());
+            info("Interact with the Start Block to start printing.");
+            state = State.SelectingChests;
+        } catch (IOException e) {
+            error("Failed to read config file.");
+        }
+    }
+
     private enum State {
-        AwaitContent,
         SelectingReset,
         SelectingChests,
         SelectingFinishedMapChest,
         SelectingDumpStation,
         SelectingTable,
         SelectingMapArea,
+        AwaitRegisterResponse,
         AwaitRestockResponse,
         AwaitResetResponse,
         AwaitMapChestResponse,

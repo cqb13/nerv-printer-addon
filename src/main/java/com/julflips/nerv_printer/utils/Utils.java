@@ -157,7 +157,7 @@ public class Utils {
             }
         }
         if (!configFolder.exists()) {
-            if (configFolder.mkdir()) {
+            if (!configFolder.mkdir()) {
                 ChatUtils.warning("Failed to create config folder in the nerv-printer folder");
                 return false;
             }
