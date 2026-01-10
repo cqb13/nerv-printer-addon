@@ -362,15 +362,17 @@ public class Utils {
         return map;
     }
 
-    public static ArrayList<BlockPos> getInvalidPlacements(BlockPos mapCorner, Block[][] map) {
+    public static ArrayList<BlockPos> getInvalidPlacements(BlockPos mapCorner, Pair<Integer, Integer> interval, Block[][] map, ArrayList<BlockPos> knownErrors) {
         ArrayList<BlockPos> invalidPlacements = new ArrayList<>();
-        for (int x = 127; x >= 0; x--) {
+        for (int x = interval.getRight(); x >= interval.getLeft(); x--) {
             for (int z = 127; z >= 0; z--) {
                 BlockPos relativePos = new BlockPos(x, 0, z);
-                BlockState blockState = MapAreaCache.getCachedBlockState(mapCorner.add(relativePos));
+                BlockPos absolutePos = mapCorner.add(relativePos);
+                if (knownErrors.contains(absolutePos)) continue;
+                BlockState blockState = MapAreaCache.getCachedBlockState(absolutePos);
                 Block block = blockState.getBlock();
                 if (!blockState.isAir()) {
-                    if (map[x][z] != block) invalidPlacements.add(relativePos);
+                    if (map[x][z] != block) invalidPlacements.add(absolutePos);
                 }
             }
         }

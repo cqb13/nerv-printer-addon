@@ -456,6 +456,11 @@ public class FullBlockPrinter extends Module {
         info("Select the §aMap Building Area (128x128)");
     }
 
+    @Override
+    public void onDeactivate() {
+        Utils.setForwardPressed(false);
+    }
+
     private void refillInventory(HashMap<Item, Integer> invMaterial) {
         //Fills restockList with required items
         restockList.clear();
