@@ -12,12 +12,11 @@ As you can see we need a restock station to refill the bot inventory. We can bui
 Make sure it fulfills the following points:
 - The fluid dispensers and lighting should cover the whole 128x128 MapArea.
 - Avoid having grass blocks on the map area since it can lead to mobs spawning in certain biomes.
-- The restock station should have a DumpStation, FinishedMapChest, MapMaterialChest, Reset Trapped Chest, and Cartography Table. I will explain later what the terms mean
-- Avoid having the bot pick up old carpets while restocking. If you choose to build the restock station on the map area use lava at the restock station to delete the old carpets. For the other version use slabs to prevent the water from washing carpets into the station.
+- The restock station should have a DumpStation, FinishedMapChest, MapMaterialChest, Reset Trapped Chest, and Cartography Table. The terms are explained below.
+- Avoid having the bot pick up old carpets while restocking. The simplest way to avoid that is to place the carpet dupers a few blocks away from the Map Area and seperate them using slabs (also avoids "noob line").
 - Make sure the server loads the entire map when resetting
 - If Phantoms are on you need a glass ceiling.
-- If you play on hard difficulty don't forget the regeneration beacon
-- **If the bot can not see the whole map from the DumpStation you need to install a mod that caches chunks to increase your render distance. This is necessary so the bot knows what carpets to restock. One mod I know for sure is compatible is [Bobby](https://www.curseforge.com/minecraft/mc-mods/bobby)**.
+- If you play on hard difficulty don't forget the regeneration 2 beacons
 
 A litematica file with an example Map Area can be found [here](CarpetPrinter.litematic).
 
@@ -54,3 +53,18 @@ The bot will build the map line by line. It calculates the maximum area he can c
 
 ### Create Map Item
 When the map is finished the bot grabs an empty map and glass pane from the MapMaterialChest and walks a small circle in the center to fill it. Depending on your render distance this step might be unnecessary. After storing the map the bot will trigger the reset and start with the next nbt file.
+
+## Optional
+
+### Save and Load Configurations
+Register the blocks as usual, then press **Save Config** in the module settings when you are finished.  
+To load a configuration, simply select the file and press the **Load** button. Printing is started in the usual way.
+
+### Multi-User Printing
+The printer can orchestrate multiple accounts simultaneously to print a map on the same map area.  
+One bot acts as the **master** and instructs the other **slaves** via direct messages.
+
+**Setup:**
+1. Load the configuration and enable the module on **every** bot.
+2. Move all slave bots into render distance of the master bot, then press the **Register** button using the master account. An **Accept** message should appear for each slave.
+3. Start the print in the usual way.
