@@ -63,7 +63,6 @@ public class MapNamer extends Module {
         .name("map-name")
         .description("The name for the map items.")
         .defaultValue("map-name_")
-        .wide()
         .renderer(StarscriptTextBoxRenderer.class)
         .build()
     );
@@ -72,7 +71,6 @@ public class MapNamer extends Module {
         .name("separator")
         .description("The separator between the x and y index.")
         .defaultValue("_")
-        .wide()
         .renderer(StarscriptTextBoxRenderer.class)
         .build()
     );
