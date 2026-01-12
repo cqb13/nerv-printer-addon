@@ -431,7 +431,7 @@ public class Utils {
         return bestSide;
     }
 
-    public static ArrayList<String> registerSlaves() {
+    public static ArrayList<String> getPlayersInRenderDistance() {
         ArrayList<String> foundPlayers = new ArrayList<>();
         for(Entity entity : mc.world.getEntities()) {
             if (entity instanceof PlayerEntity player && !mc.player.equals(player)) {
@@ -452,7 +452,6 @@ public class Utils {
 
     public static ArrayList<Pair<Integer, Integer>> generateIntervals(int lines, int sections) {
         int sectionSize = (int) Math.ceil((float) lines / (float) sections);
-        ChatUtils.info("SectionSize: " + sectionSize);
         ArrayList<Pair<Integer, Integer>> sectionList = new ArrayList<>();
         for (int end = lines-1; end >= 0 ; end -= sectionSize) {
             int start = Math.max(0, end - sectionSize + 1);

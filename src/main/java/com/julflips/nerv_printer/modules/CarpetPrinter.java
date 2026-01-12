@@ -376,6 +376,7 @@ public class CarpetPrinter extends Module {
     boolean closeNextInvPacket;
     String master;
     State state;
+    State oldState;
     Pair<Integer, Integer> workingInterval;     //Interval the bot should work in 0-127
     Pair<Integer, Integer> trueInterval;        //Stores the actual interval in case the old one is temporarily overwritten while repairing
     Pair<BlockPos, Vec3d> reset;
@@ -455,8 +456,17 @@ public class CarpetPrinter extends Module {
 
         // ---- Multi-user section ----
         table.add(theme.label("Multi-User: "));
-        WButton startButton = table.add(theme.button("Register players in render distance")).widget();
-        startButton.action = () -> createRegisterSlaveMessages();
+        WButton startButton = table.add(theme.button("Register players in range")).widget();
+        startButton.action = () -> registerSlaves();
+
+        WButton endButton = table.add(theme.button("Remove players in range")).widget();
+        endButton.action = () -> removeSlaves();
+
+        WButton pauseButton = table.add(theme.button("Pause all")).widget();
+        pauseButton.action = () -> toggleSlaves(false);
+
+        WButton continueButton = table.add(theme.button("Continue all")).widget();
+        continueButton.action = () -> toggleSlaves(true);
         table.row();
 
         return list;
@@ -498,6 +508,7 @@ public class CarpetPrinter extends Module {
         closeResetChestTicks = 0;
         toBeSwappedSlot = -1;
         master = null;
+        oldState = null;
 
         if (!customFolderPath.get()) {
             mapFolder = new File(Utils.getMinecraftDirectory(), "nerv-printer");
@@ -664,15 +675,10 @@ public class CarpetPrinter extends Module {
                         return;
                     }
 
-                    ArrayList<Pair<Integer, Integer>> intervals = Utils.generateIntervals(map.length, slaves.size()+1);
-                    workingInterval = intervals.remove(0);
-                    trueInterval = workingInterval;
-                    for (int i = 0; i < intervals.size(); i++) {
-                        String slave = slaves.get(i);
-                        toBeSentMessages.add(slave + " interval:" + intervals.get(i).getLeft() + ":" + intervals.get(i).getRight());
+                    setIntervals();
+                    for (String slave : slaves) {
                         toBeSentMessages.add(slave + " start");
                     }
-
                     startBuilding();
                 }
                 break;
@@ -719,14 +725,14 @@ public class CarpetPrinter extends Module {
                     break;
                 case "start":
                     if (!sender.equals(master)) break;
-                    if (state.equals(State.AwaitOthersFinishing)) {
+                    if (state.equals(State.AwaitContinue)) {
                         prepareNextMapFile();
                     }
                     startBuilding();
                 case "finished":
                     if (!slaves.contains(sender)) break;
                     finishedSlaves.add(sender);
-                    if (state.equals(State.AwaitOthersFinishing) && finishedSlaves.size() == slaves.size()) {
+                    if (state.equals(State.AwaitContinue) && finishedSlaves.size() == slaves.size()) {
                         endBuilding();
                     }
                     break;
@@ -736,6 +742,21 @@ public class CarpetPrinter extends Module {
                     if (!knownErrors.contains(errorPos)) {
                         knownErrors.add(errorPos);
                     }
+                    break;
+                case "pause":
+                    if (!sender.equals(master) || state.equals(State.AwaitContinue)) break;
+                    oldState = state;
+                    state = State.AwaitContinue;
+                    Utils.setForwardPressed(false);
+                    break;
+                case "continue":
+                    if (!sender.equals(master) || oldState == null) break;
+                    state = oldState;
+                    oldState = null;
+                    break;
+                case "remove":
+                    if (!sender.equals(master)) break;
+                    toggle();
                     break;
             }
         }
@@ -929,7 +950,7 @@ public class CarpetPrinter extends Module {
             }
         }
 
-        if (state == null) return;
+        if (state == null || state.equals(State.AwaitContinue)) return;
 
         long timeDifference = System.currentTimeMillis() - lastTickTime;
         int allowedPlacements = (int) Math.floor(timeDifference / placeDelay.get());
@@ -1141,7 +1162,7 @@ public class CarpetPrinter extends Module {
             if (checkpoints.size() == 0) {
                 if (master != null) {
                     toBeSentMessages.add(master + " finished");
-                    state = State.AwaitOthersFinishing;
+                    state = State.AwaitContinue;
                     Utils.setForwardPressed(false);
                     return;
                 }
@@ -1149,7 +1170,7 @@ public class CarpetPrinter extends Module {
                     endBuilding();
                 } else {
                     info("Waiting for slaves to finish...");
-                    state = State.AwaitOthersFinishing;
+                    state = State.AwaitContinue;
                     Utils.setForwardPressed(false);
                     return;
                 }
@@ -1576,12 +1597,12 @@ public class CarpetPrinter extends Module {
         }
     }
 
-    private void createRegisterSlaveMessages() {
+    private void registerSlaves() {
         if (state == null) {
             warning("The module needs to be enabled to register new slaves.");
             return;
         }
-        ArrayList<String> foundPlayers = Utils.registerSlaves();
+        ArrayList<String> foundPlayers = Utils.getPlayersInRenderDistance();
         if (foundPlayers.isEmpty()) {
             warning("No players found in render distance.");
         }
@@ -1589,6 +1610,36 @@ public class CarpetPrinter extends Module {
         for (String slave : foundPlayers) {
             if (slaves.contains(slave)) continue;
             toBeSentMessages.add(slave + " register");
+        }
+    }
+
+    private void toggleSlaves(boolean active) {
+        String message = active ? " continue" : " pause";
+        for (String slave : slaves) {
+            toBeSentMessages.add(slave + message);
+        }
+    }
+
+    private void removeSlaves() {
+        ArrayList<String> foundPlayers = Utils.getPlayersInRenderDistance();
+        if (foundPlayers.isEmpty()) {
+            warning("No players found in render distance.");
+        }
+        for (String slave : foundPlayers) {
+            if (!slaves.contains(slave)) continue;
+            toBeSentMessages.add(slave + " remove");
+            slaves.remove(slave);
+        }
+        setIntervals();
+    }
+
+    private void setIntervals() {
+        ArrayList<Pair<Integer, Integer>> intervals = Utils.generateIntervals(map.length, slaves.size()+1);
+        workingInterval = intervals.remove(intervals.size()/2);
+        trueInterval = workingInterval;
+        for (int i = 0; i < intervals.size(); i++) {
+            String slave = slaves.get(i);
+            toBeSentMessages.add(slave + " interval:" + intervals.get(i).getLeft() + ":" + intervals.get(i).getRight());
         }
     }
 
@@ -1615,7 +1666,7 @@ public class CarpetPrinter extends Module {
         AwaitBlockBreak,
         AwaitAreaClear,
         AwaitNBTFile,
-        AwaitOthersFinishing,
+        AwaitContinue,
         Walking,
         Dumping
     }
