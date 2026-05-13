@@ -158,7 +158,6 @@ public class CarpetPrinter extends Module implements MapPrinter {
             .name("nerv-printer-folder-path")
             .description("The path to your nerv-printer directory.")
             .defaultValue("C:\\Users\\(username)\\AppData\\Roaming\\.minecraft\\nerv-printer")
-            .wide()
             .renderer(StarscriptTextBoxRenderer.class)
             .visible(() -> customFolderPath.get())
             .onChanged((value) -> warnPathChanged())
@@ -174,7 +173,6 @@ public class CarpetPrinter extends Module implements MapPrinter {
             .name("config-file-name")
             .description("The config file that is loaded  when the module is enabled.")
             .defaultValue("carpet-printer-config.json")
-            .wide()
             .renderer(StarscriptTextBoxRenderer.class)
             .visible(() -> useDefaultConfigFile.get())
             .build());

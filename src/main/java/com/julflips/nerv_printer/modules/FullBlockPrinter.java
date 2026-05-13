@@ -159,7 +159,6 @@ public class FullBlockPrinter extends Module {
         .name("nerv-printer-folder-path")
         .description("The path to your nerv-printer directory.")
         .defaultValue("C:\\Users\\(username)\\AppData\\Roaming\\.minecraft\\nerv-printer")
-        .wide()
         .renderer(StarscriptTextBoxRenderer.class)
         .visible(() -> customFolderPath.get())
         .build()
