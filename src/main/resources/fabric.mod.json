@@ -4,27 +4,21 @@
   "version": "${version}",
   "name": "Nerv Printer",
   "description": "Automatically builds 2D maps from nbt files.",
-  "authors": [
-    "Julflips"
-  ],
+  "authors": ["Julflips"],
   "contact": {
     "repo": "https://github.com/Julflips/nerv-printer-addon"
   },
   "icon": "assets/nerv/icon.png",
   "environment": "client",
   "entrypoints": {
-    "meteor": [
-      "com.julflips.nerv_printer.Addon"
-    ]
+    "meteor": ["com.julflips.nerv_printer.Addon"]
   },
-  "mixins": [
-    "nerv_printer.mixins.json"
-  ],
+  "mixins": ["nerv_printer.mixins.json"],
   "custom": {
     "meteor-client:color": "20,255,210"
   },
   "depends": {
-    "java": ">=17",
+    "java": ">=21",
     "minecraft": ">=${mc_version}",
     "meteor-client": "*"
   }

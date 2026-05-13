@@ -1,11 +1,10 @@
 package com.julflips.nerv_printer.utils;
 
-import net.minecraft.block.BlockState;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.ShearsItem;
-import net.minecraft.registry.tag.ItemTags;
-
 import java.util.Set;
+import net.minecraft.tags.ItemTags;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ShearsItem;
+import net.minecraft.world.level.block.state.BlockState;
 
 public final class ToolUtils {
 
@@ -14,15 +13,15 @@ public final class ToolUtils {
         float bestScore = 1;
         ItemStack bestStack = null;
         for (ItemStack tool : tools) {
-            if (tool.getMiningSpeedMultiplier(targetBlock) > bestScore) {
-                bestScore = tool.getMiningSpeedMultiplier(targetBlock);
+            if (tool.getDestroySpeed(targetBlock) > bestScore) {
+                bestScore = tool.getDestroySpeed(targetBlock);
                 bestStack = tool;
             }
         }
         // Default to Pickaxe if no tool increases the mining speed
         if (bestStack == null) {
             for (ItemStack tool : tools) {
-                if (tool.isIn(ItemTags.PICKAXES)) {
+                if (tool.is(ItemTags.PICKAXES)) {
                     return tool;
                 }
             }
@@ -31,10 +30,10 @@ public final class ToolUtils {
     }
 
     public static boolean isTool(ItemStack itemStack) {
-        if (itemStack.isIn(ItemTags.PICKAXES)
-            || itemStack.isIn(ItemTags.AXES)
-            || itemStack.isIn(ItemTags.SHOVELS)
-            || itemStack.isIn(ItemTags.HOES)
+        if (itemStack.is(ItemTags.PICKAXES)
+            || itemStack.is(ItemTags.AXES)
+            || itemStack.is(ItemTags.SHOVELS)
+            || itemStack.is(ItemTags.HOES)
             || itemStack.getItem() instanceof ShearsItem) {
             return true;
         }

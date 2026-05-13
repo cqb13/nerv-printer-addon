@@ -5,12 +5,12 @@ import meteordevelopment.meteorclient.events.packets.PacketEvent;
 import meteordevelopment.meteorclient.events.world.TickEvent;
 import meteordevelopment.meteorclient.utils.player.ChatUtils;
 import meteordevelopment.orbit.EventHandler;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.network.packet.s2c.play.ChatMessageS2CPacket;
-import net.minecraft.network.packet.s2c.play.GameMessageS2CPacket;
-import net.minecraft.util.Pair;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ClientboundPlayerChatPacket;
+import net.minecraft.network.protocol.game.ClientboundSystemChatPacket;
+import net.minecraft.util.Tuple;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -113,10 +113,10 @@ public final class SlaveSystem {
 
     public static void generateIntervals() {
         int sectionSize = (int) Math.ceil((float) 128 / (float) (slaves.size() + 1));
-        ArrayList<Pair<Integer, Integer>> intervals = new ArrayList<>();
+        ArrayList<Tuple<Integer, Integer>> intervals = new ArrayList<>();
         for (int end = 127; end >= 0; end -= sectionSize) {
             int start = Math.max(0, end - sectionSize + 1);
-            intervals.add(new Pair<>(start, end));
+            intervals.add(new Tuple<>(start, end));
         }
         Collections.reverse(intervals);
 
@@ -131,7 +131,7 @@ public final class SlaveSystem {
 
         for (int i = 0; i < intervals.size(); i++) {
             String slave = slaves.get(i);
-            SlaveSystem.queueDM(slave, "interval:" + intervals.get(i).getLeft() + ":" + intervals.get(i).getRight());
+            SlaveSystem.queueDM(slave, "interval:" + intervals.get(i).getA() + ":" + intervals.get(i).getB());
         }
     }
 
@@ -141,8 +141,8 @@ public final class SlaveSystem {
             return;
         }
         ArrayList<String> foundPlayers = new ArrayList<>();
-        for (Entity entity : mc.world.getEntities()) {
-            if (entity instanceof PlayerEntity player && !mc.player.equals(player)) {
+        for (Entity entity : mc.level.entitiesForRendering()) {
+            if (entity instanceof Player player && !mc.player.equals(player)) {
                 foundPlayers.add(player.getName().getString());
             }
         }
@@ -165,8 +165,8 @@ public final class SlaveSystem {
     }
 
     public static boolean canSeePlayer(String playerName) {
-        for (Entity entity : mc.world.getEntities()) {
-            if (entity instanceof PlayerEntity player && player.getName().getString().equals(playerName)) {
+        for (Entity entity : mc.level.entitiesForRendering()) {
+            if (entity instanceof Player player && player.getName().getString().equals(playerName)) {
                 return true;
             }
         }
@@ -201,7 +201,7 @@ public final class SlaveSystem {
             switch (command) {
                 case "interval":
                     if (colonSplit.length < 3) break;
-                    Pair<Integer, Integer> interval = new Pair<>(Integer.valueOf(colonSplit[1]), Integer.valueOf(colonSplit[2]));
+                    Tuple<Integer, Integer> interval = new Tuple<>(Integer.valueOf(colonSplit[1]), Integer.valueOf(colonSplit[2]));
                     printerModule.setInterval(interval);
                     break;
                 case "pause":
@@ -253,24 +253,24 @@ public final class SlaveSystem {
     private static void onReceivePacket(PacketEvent.Receive event) {
         if (printerModule == null) return;
 
-        if (event.packet instanceof ChatMessageS2CPacket packet) {
-            handleMessage(packet.body().content(), packet.serializedParameters().name().getString());
+        if (event.packet instanceof ClientboundPlayerChatPacket packet) {
+            handleMessage(packet.body().content(), packet.chatType().name().getString());
         }
 
-        if (event.packet instanceof GameMessageS2CPacket packet) {
+        if (event.packet instanceof ClientboundSystemChatPacket packet) {
             handleMessage(packet.content().getString(), null);
         }
     }
 
     @EventHandler
     private static void onTick(TickEvent.Pre event) {
-        if (mc.getNetworkHandler() == null) return;
+        if (mc.getConnection() == null) return;
         if (timeout > 0) timeout--;
         if (!toBeSentMessages.isEmpty()) {
             if (timeout <= 0) {
                 String message = toBeSentMessages.remove(0);
                 if (randomLength > 0) message += ":" + UUID.randomUUID().toString().substring(0, randomLength);
-                mc.getNetworkHandler().sendChatCommand(message);
+                mc.getConnection().sendCommand(message);
                 timeout = commandDelay;
             }
         }

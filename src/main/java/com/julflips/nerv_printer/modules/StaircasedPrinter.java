@@ -15,34 +15,44 @@ import meteordevelopment.meteorclient.gui.widgets.pressable.WButton;
 import meteordevelopment.meteorclient.renderer.ShapeMode;
 import meteordevelopment.meteorclient.settings.*;
 import meteordevelopment.meteorclient.systems.modules.Module;
+import meteordevelopment.meteorclient.utils.misc.Names;
 import meteordevelopment.meteorclient.utils.player.InvUtils;
 import meteordevelopment.meteorclient.utils.player.PlayerUtils;
 import meteordevelopment.meteorclient.utils.player.Rotations;
 import meteordevelopment.meteorclient.utils.render.color.SettingColor;
 import meteordevelopment.meteorclient.utils.world.BlockUtils;
 import meteordevelopment.orbit.EventHandler;
-import net.minecraft.block.*;
-import net.minecraft.enchantment.EnchantmentHelper;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.item.*;
-import net.minecraft.nbt.NbtCompound;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.NbtAccounter;
 import net.minecraft.nbt.NbtIo;
-import net.minecraft.nbt.NbtList;
-import net.minecraft.nbt.NbtSizeTracker;
-import net.minecraft.network.packet.c2s.play.*;
-import net.minecraft.network.packet.s2c.play.InventoryS2CPacket;
-import net.minecraft.network.packet.s2c.play.PlayerPositionLookS2CPacket;
-import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.text.ClickEvent;
-import net.minecraft.text.HoverEvent;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.Hand;
-import net.minecraft.util.Pair;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.network.chat.ClickEvent;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.protocol.game.ClientboundContainerSetContentPacket;
+import net.minecraft.network.protocol.game.ClientboundPlayerPositionPacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerCommandPacket;
+import net.minecraft.network.protocol.game.ServerboundUseItemOnPacket;
+import net.minecraft.network.protocol.game.ServerboundUseItemPacket;
+import net.minecraft.util.Tuple;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
+import net.minecraft.world.item.enchantment.Enchantments;
+import net.minecraft.world.level.block.AbstractChestBlock;
+import net.minecraft.world.level.block.BedBlock;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
 import org.apache.commons.lang3.tuple.Triple;
 import org.lwjgl.util.tinyfd.TinyFileDialogs;
 
@@ -446,32 +456,32 @@ public class StaircasedPrinter extends Module implements MapPrinter {
     State state;
     State oldState;
     State debugPreviousState;
-    Pair<Integer, Integer> workingInterval;     //Interval the bot should work in 0-127
-    Pair<Integer, Integer> trueInterval;        //Stores the actual interval in case the old one is temporarily overwritten while repairing
-    Pair<BlockPos, Vec3d> usedToolChest;
-    Pair<BlockPos, Vec3d> cartographyTable;
-    Pair<BlockPos, Vec3d> finishedMapChest;
-    Pair<BlockPos, Vec3d> bed;
-    ArrayList<Pair<BlockPos, Vec3d>> mapMaterialChests;
-    Pair<Vec3d, Pair<Float, Float>> dumpStation;                    //Pos, Yaw, Pitch
+    Tuple<Integer, Integer> workingInterval;     //Interval the bot should work in 0-127
+    Tuple<Integer, Integer> trueInterval;        //Stores the actual interval in case the old one is temporarily overwritten while repairing
+    Tuple<BlockPos, Vec3> usedToolChest;
+    Tuple<BlockPos, Vec3> cartographyTable;
+    Tuple<BlockPos, Vec3> finishedMapChest;
+    Tuple<BlockPos, Vec3> bed;
+    ArrayList<Tuple<BlockPos, Vec3>> mapMaterialChests;
+    Tuple<Vec3, Tuple<Float, Float>> dumpStation;                    //Pos, Yaw, Pitch
     BlockPos mapCorner;
     BlockPos tempChestPos;
     BlockPos lastInteractedChest;
     BlockPos miningPos;
     Item lastSwappedMaterial;
-    InventoryS2CPacket toBeHandledInvPacket;
-    HashMap<Integer, Pair<Block, Integer>> blockPaletteDict;      //Maps palette block id to the Minecraft block and amount
-    HashMap<Item, ArrayList<Pair<BlockPos, Vec3d>>> materialDict; //Maps block to the chest pos and the open position
+    ClientboundContainerSetContentPacket toBeHandledInvPacket;
+    HashMap<Integer, Tuple<Block, Integer>> blockPaletteDict;      //Maps palette block id to the Minecraft block and amount
+    HashMap<Item, ArrayList<Tuple<BlockPos, Vec3>>> materialDict; //Maps block to the chest pos and the open position
     Set<ItemStack> toolSet;                                       //Set of all registered tool item stacks
     ArrayList<Integer> availableSlots;
     ArrayList<Integer> availableHotBarSlots;
     ArrayList<Triple<Item, Integer, Integer>> restockList;//Material, Stacks, Raw Amount
     ArrayList<BlockPos> checkedChests;
-    ArrayList<Pair<Vec3d, Pair<String, BlockPos>>> checkpoints;    //(GoalPos, (checkpointAction, targetBlock))
+    ArrayList<Tuple<Vec3, Tuple<String, BlockPos>>> checkpoints;    //(GoalPos, (checkpointAction, targetBlock))
     ArrayList<File> startedFiles;
     ArrayList<Integer> restockBacklogSlots;
     ArrayList<BlockPos> knownErrors;
-    Pair<Block, Integer>[][] map;
+    Tuple<Block, Integer>[][] map;
     File mapFolder;
     File mapFile;
 
@@ -515,7 +525,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         oldState = null;
         debugPreviousState = null;
 
-        setInterval(new Pair<>(0, 127));
+        setInterval(new Tuple<>(0, 127));
         // Initialize Slave System settings
         SlaveSystem.setupSlaveSystem(this, commandDelay.get(), directMessageCommand.get(), senderPrefix.get(), senderSuffix.get(), randomSuffix.get());
 
@@ -534,11 +544,11 @@ public class StaircasedPrinter extends Module implements MapPrinter {
             for (File file : mapFolder.listFiles()) {
                 if (!file.isFile()) continue;
                 if (!prepareNextMapFile()) return;
-                for (Pair<Block, Integer> material : blockPaletteDict.values()) {
-                    if (!materialCountDict.containsKey(material.getLeft())) {
-                        materialCountDict.put(material.getLeft(), material.getRight());
+                for (Tuple<Block, Integer> material : blockPaletteDict.values()) {
+                    if (!materialCountDict.containsKey(material.getA())) {
+                        materialCountDict.put(material.getA(), material.getB());
                     } else {
-                        materialCountDict.put(material.getLeft(), Math.max(materialCountDict.get(material.getLeft()), material.getRight()));
+                        materialCountDict.put(material.getA(), Math.max(materialCountDict.get(material.getA()), material.getB()));
                     }
                 }
             }
@@ -573,17 +583,17 @@ public class StaircasedPrinter extends Module implements MapPrinter {
 
     @EventHandler
     private void onSendPacket(PacketEvent.Send event) {
-        if (state == State.SelectingDumpStation && event.packet instanceof PlayerActionC2SPacket packet
-            && packet.getAction() == PlayerActionC2SPacket.Action.DROP_ITEM) {
-            dumpStation = new Pair<>(mc.player.getEntityPos(), new Pair<>(mc.player.getYaw(), mc.player.getPitch()));
+        if (state == State.SelectingDumpStation && event.packet instanceof ServerboundPlayerActionPacket packet
+            && packet.getAction() == ServerboundPlayerActionPacket.Action.DROP_ITEM) {
+            dumpStation = new Tuple<>(mc.player.position(), new Tuple<>(mc.player.getYRot(), mc.player.getXRot()));
             state = State.SelectingFinishedMapChest;
             info("Dump Station selected. Select the §aFinished Map Chest");
             return;
         }
-        if (!(event.packet instanceof PlayerInteractBlockC2SPacket packet) || state == null) return;
+        if (!(event.packet instanceof ServerboundUseItemOnPacket packet) || state == null) return;
         switch (state) {
             case SelectingMapArea:
-                BlockPos hitPos = packet.getBlockHitResult().getBlockPos().offset(packet.getBlockHitResult().getSide());
+                BlockPos hitPos = packet.getHitResult().getBlockPos().relative(packet.getHitResult().getDirection());
                 int adjustedX = Utils.getIntervalStart(hitPos.getX());
                 int adjustedZ = Utils.getIntervalStart(hitPos.getZ());
                 mapCorner = new BlockPos(adjustedX, hitPos.getY(), adjustedZ);
@@ -592,25 +602,25 @@ public class StaircasedPrinter extends Module implements MapPrinter {
                 info("Map Area selected. Select the §aCartography Table.");
                 break;
             case SelectingTable:
-                BlockPos blockPos = packet.getBlockHitResult().getBlockPos();
+                BlockPos blockPos = packet.getHitResult().getBlockPos();
                 if (MapAreaCache.getCachedBlockState(blockPos).getBlock().equals(Blocks.CARTOGRAPHY_TABLE)) {
-                    cartographyTable = new Pair<>(blockPos, mc.player.getEntityPos());
+                    cartographyTable = new Tuple<>(blockPos, mc.player.position());
                     info("Cartography Table selected. Throw an item into the §aDump Station.");
                     state = State.SelectingDumpStation;
                 }
                 break;
             case SelectingFinishedMapChest:
-                blockPos = packet.getBlockHitResult().getBlockPos();
+                blockPos = packet.getHitResult().getBlockPos();
                 if (MapAreaCache.getCachedBlockState(blockPos).getBlock() instanceof AbstractChestBlock) {
-                    finishedMapChest = new Pair<>(blockPos, mc.player.getEntityPos());
+                    finishedMapChest = new Tuple<>(blockPos, mc.player.position());
                     info("Finished Map Chest selected. Select the §aUsed Pickaxe Chest.");
                     state = State.SelectingUsedPickaxeChest;
                 }
                 break;
             case SelectingUsedPickaxeChest:
-                blockPos = packet.getBlockHitResult().getBlockPos();
+                blockPos = packet.getHitResult().getBlockPos();
                 if (MapAreaCache.getCachedBlockState(blockPos).getBlock() instanceof AbstractChestBlock) {
-                    usedToolChest = new Pair<>(blockPos, mc.player.getEntityPos());
+                    usedToolChest = new Tuple<>(blockPos, mc.player.position());
                     if (sleep.get()) {
                         info("Used Pickaxe Chest selected. Select the §abed used for sleeping.");
                         state = State.SelectingBed;
@@ -621,9 +631,9 @@ public class StaircasedPrinter extends Module implements MapPrinter {
                 }
                 break;
             case SelectingBed:
-                blockPos = packet.getBlockHitResult().getBlockPos();
+                blockPos = packet.getHitResult().getBlockPos();
                 if (MapAreaCache.getCachedBlockState(blockPos).getBlock() instanceof BedBlock) {
-                    bed = new Pair<>(blockPos, mc.player.getEntityPos());
+                    bed = new Tuple<>(blockPos, mc.player.position());
                     info("Bed selected. Select all §aMaterial-, Tool-, and Map-Chests.");
                     state = State.SelectingChests;
                 }
@@ -631,7 +641,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
             case SelectingChests:
                 if (startBlocks.get().isEmpty())
                     warning("No block selected as Start Block! Please select one in the settings.");
-                blockPos = packet.getBlockHitResult().getBlockPos();
+                blockPos = packet.getHitResult().getBlockPos();
                 BlockState blockState = MapAreaCache.getCachedBlockState(blockPos);
                 if (MapAreaCache.getCachedBlockState(blockPos).getBlock().equals(Blocks.CHEST)) {
                     tempChestPos = blockPos;
@@ -662,7 +672,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
     private void onReceivePacket(PacketEvent.Receive event) {
         if (state == null) return;
 
-        if (event.packet instanceof PlayerPositionLookS2CPacket) {
+        if (event.packet instanceof ClientboundPlayerPositionPacket) {
             timeoutTicks = posResetTimeout.get();
             if (timeoutTicks > 0) {
                 Utils.setForwardPressed(false);
@@ -670,14 +680,14 @@ public class StaircasedPrinter extends Module implements MapPrinter {
             }
         }
 
-        if (!(event.packet instanceof InventoryS2CPacket packet)) return;
+        if (!(event.packet instanceof ClientboundContainerSetContentPacket packet)) return;
 
         if (state.equals(State.AwaitRegisterResponse)) {
             Item foundItem = null;
             ItemStack foundItemStack = null;
             boolean isMixedContent = false;
-            for (int i = 0; i < packet.contents().size() - 36; i++) {
-                ItemStack stack = packet.contents().get(i);
+            for (int i = 0; i < packet.items().size() - 36; i++) {
+                ItemStack stack = packet.items().get(i);
                 if (!stack.isEmpty()) {
                     if (foundItem != null && foundItem != stack.getItem().asItem()) {
                         isMixedContent = true;
@@ -686,7 +696,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
                     foundItemStack = stack;
                     if (foundItem == Items.MAP || foundItem == Items.GLASS_PANE) {
                         info("Registered §aMapChest");
-                        mapMaterialChests = Utils.saveAdd(mapMaterialChests, tempChestPos, mc.player.getEntityPos());
+                        mapMaterialChests = Utils.saveAdd(mapMaterialChests, tempChestPos, mc.player.position());
                         state = State.SelectingChests;
                         return;
                     }
@@ -705,10 +715,10 @@ public class StaircasedPrinter extends Module implements MapPrinter {
             if (ToolUtils.isTool(foundItemStack)) {
                 toolSet.add(foundItemStack);
             }
-            info("Registered item: §a" + foundItem.getName().getString());
+            info("Registered item: §a" + Names.get(foundItem));
             if (!materialDict.containsKey(foundItem)) materialDict.put(foundItem, new ArrayList<>());
-            ArrayList<Pair<BlockPos, Vec3d>> oldList = materialDict.get(foundItem);
-            ArrayList newChestList = Utils.saveAdd(oldList, tempChestPos, mc.player.getEntityPos());
+            ArrayList<Tuple<BlockPos, Vec3>> oldList = materialDict.get(foundItem);
+            ArrayList newChestList = Utils.saveAdd(oldList, tempChestPos, mc.player.position());
             materialDict.put(foundItem, newChestList);
             state = State.SelectingChests;
             return;
@@ -722,19 +732,19 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         }
     }
 
-    private void handleInventoryPacket(InventoryS2CPacket packet) {
+    private void handleInventoryPacket(ClientboundContainerSetContentPacket packet) {
         if (debugPrints.get()) info("Handling InvPacket for: " + state);
         closeNextInvPacket = true;
         switch (state) {
             case AwaitRestockResponse:
                 interactTimeout = 0;
                 boolean foundMaterials = false;
-                List<Integer> slots = IntStream.rangeClosed(0, packet.contents().size() - 37)
+                List<Integer> slots = IntStream.rangeClosed(0, packet.items().size() - 37)
                     .boxed()
                     .collect(Collectors.toList());
                 Collections.shuffle(slots);
                 for (int slot : slots) {
-                    ItemStack stack = packet.contents().get(slot);
+                    ItemStack stack = packet.items().get(slot);
 
                     if (restockList.get(0).getMiddle() == 0) {
                         foundMaterials = true;
@@ -746,7 +756,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
                         int highestFreeSlot = Utils.findHighestFreeSlot(packet);
                         if (highestFreeSlot == -1) {
                             warning("No free slots found in inventory.");
-                            checkpoints.add(0, new Pair(dumpStation.getLeft(), new Pair("dump", null)));
+                            checkpoints.add(0, new Tuple(dumpStation.getA(), new Tuple("dump", null)));
                             state = State.Walking;
                             return;
                         }
@@ -761,8 +771,8 @@ public class StaircasedPrinter extends Module implements MapPrinter {
                 int mapSlot = -1;
                 int paneSlot = -1;
                 //Search for map and glass pane
-                for (int slot = 0; slot < packet.contents().size() - 36; slot++) {
-                    ItemStack stack = packet.contents().get(slot);
+                for (int slot = 0; slot < packet.items().size() - 36; slot++) {
+                    ItemStack stack = packet.items().get(slot);
                     if (stack.getItem() == Items.MAP) mapSlot = slot;
                     if (stack.getItem() == Items.GLASS_PANE) paneSlot = slot;
                 }
@@ -776,13 +786,13 @@ public class StaircasedPrinter extends Module implements MapPrinter {
                 Utils.getOneItem(paneSlot, true, availableSlots, availableHotBarSlots, packet);
                 mc.player.getInventory().setSelectedSlot(availableHotBarSlots.get(0));
 
-                BlockPos centerBlockPos = mapCorner.add(map.length / 2 - 1, map[map.length / 2 - 1][map[0].length / 2 - 1].getRight(), map[0].length / 2 - 1);
-                Vec3d center = centerBlockPos.toCenterPos().add(0, 0.5, 0);
-                Vec3d centerEdge = mapCorner.add(map.length / 2 - 1, 0, -1).toCenterPos().add(0, 0.5, 0);
-                checkpoints.add(new Pair(centerEdge, new Pair("walkRestock", null)));
-                checkpoints.add(new Pair(center, new Pair("fillMap", null)));
-                checkpoints.add(new Pair(centerEdge, new Pair("walkRestock", null)));
-                checkpoints.add(new Pair(cartographyTable.getRight(), new Pair<>("cartographyTable", null)));
+                BlockPos centerBlockPos = mapCorner.offset(map.length / 2 - 1, map[map.length / 2 - 1][map[0].length / 2 - 1].getB(), map[0].length / 2 - 1);
+                Vec3 center = centerBlockPos.getCenter().add(0, 0.5, 0);
+                Vec3 centerEdge = mapCorner.offset(map.length / 2 - 1, 0, -1).getCenter().add(0, 0.5, 0);
+                checkpoints.add(new Tuple(centerEdge, new Tuple("walkRestock", null)));
+                checkpoints.add(new Tuple(center, new Tuple("fillMap", null)));
+                checkpoints.add(new Tuple(centerEdge, new Tuple("walkRestock", null)));
+                checkpoints.add(new Tuple(cartographyTable.getB(), new Tuple<>("cartographyTable", null)));
                 state = State.Walking;
                 break;
             case AwaitCartographyResponse:
@@ -795,9 +805,9 @@ public class StaircasedPrinter extends Module implements MapPrinter {
                     } else {
                         slot -= 6;
                     }
-                    ItemStack stack = packet.contents().get(slot);
+                    ItemStack stack = packet.items().get(slot);
                     if (searchingMap && stack.getItem() == Items.FILLED_MAP) {
-                        mc.interactionManager.clickSlot(packet.syncId(), slot, 0, SlotActionType.QUICK_MOVE, mc.player);
+                        mc.gameMode.handleContainerInput(packet.containerId(), slot, 0, ContainerInput.QUICK_MOVE, mc.player);
                         searchingMap = false;
                     }
                 }
@@ -807,23 +817,23 @@ public class StaircasedPrinter extends Module implements MapPrinter {
                     } else {
                         slot -= 6;
                     }
-                    ItemStack stack = packet.contents().get(slot);
+                    ItemStack stack = packet.items().get(slot);
                     if (!searchingMap && stack.getItem() == Items.GLASS_PANE) {
-                        mc.interactionManager.clickSlot(packet.syncId(), slot, 0, SlotActionType.QUICK_MOVE, mc.player);
+                        mc.gameMode.handleContainerInput(packet.containerId(), slot, 0, ContainerInput.QUICK_MOVE, mc.player);
                         break;
                     }
                 }
-                mc.interactionManager.clickSlot(packet.syncId(), 2, 0, SlotActionType.QUICK_MOVE, mc.player);
-                checkpoints.add(new Pair(finishedMapChest.getRight(), new Pair("finishedMapChest", null)));
+                mc.gameMode.handleContainerInput(packet.containerId(), 2, 0, ContainerInput.QUICK_MOVE, mc.player);
+                checkpoints.add(new Tuple(finishedMapChest.getB(), new Tuple("finishedMapChest", null)));
                 state = State.Walking;
                 break;
             case AwaitFinishedMapChestResponse:
                 interactTimeout = 0;
                 timeoutTicks = postRestockDelay.get();
-                for (int slot = packet.contents().size() - 36; slot < packet.contents().size(); slot++) {
-                    ItemStack stack = packet.contents().get(slot);
+                for (int slot = packet.items().size() - 36; slot < packet.items().size(); slot++) {
+                    ItemStack stack = packet.items().get(slot);
                     if (stack.getItem() == Items.FILLED_MAP) {
-                        mc.interactionManager.clickSlot(packet.syncId(), slot, 0, SlotActionType.QUICK_MOVE, mc.player);
+                        mc.gameMode.handleContainerInput(packet.containerId(), slot, 0, ContainerInput.QUICK_MOVE, mc.player);
                         break;
                     }
                 }
@@ -831,10 +841,10 @@ public class StaircasedPrinter extends Module implements MapPrinter {
                 break;
             case AwaitUsedToolChestResponse:
                 interactTimeout = 0;
-                for (int slot = packet.contents().size() - 36; slot < packet.contents().size(); slot++) {
-                    ItemStack stack = packet.contents().get(slot);
+                for (int slot = packet.items().size() - 36; slot < packet.items().size(); slot++) {
+                    ItemStack stack = packet.items().get(slot);
                     if (ToolUtils.isTool(stack)) {
-                        mc.interactionManager.clickSlot(packet.syncId(), slot, 0, SlotActionType.QUICK_MOVE, mc.player);
+                        mc.gameMode.handleContainerInput(packet.containerId(), slot, 0, ContainerInput.QUICK_MOVE, mc.player);
                     }
                 }
                 state = State.AwaitNBTFile;
@@ -876,7 +886,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
             knownErrors.clear();
             knownErrors.addAll(getInvalidPlacements());
             if (knownErrors.isEmpty()) {
-                checkpoints.add(new Pair(mc.player.getEntityPos(), new Pair("lineEnd", null)));
+                checkpoints.add(new Tuple(mc.player.position(), new Tuple("lineEnd", null)));
                 state = State.Walking;
             } else {
                 return;
@@ -911,7 +921,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
             if (interactTimeout == 0) {
                 info("Interaction timed out. Interacting again...");
                 if (state == State.AwaitCartographyResponse) {
-                    interactWithBlock(cartographyTable.getLeft());
+                    interactWithBlock(cartographyTable.getA());
                 } else {
                     interactWithBlock(lastInteractedChest);
                 }
@@ -924,7 +934,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         }
 
         if (timeoutTicks > 0) {
-            if (mc.player.isOnGround()) timeoutTicks--;
+            if (mc.player.onGround()) timeoutTicks--;
             Utils.setForwardPressed(false);
             Utils.setBackwardPressed(false);
             Utils.setJumpPressed(false);
@@ -944,7 +954,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         // Restocking
         if (restockBacklogSlots.size() > 0) {
             int slot = restockBacklogSlots.remove(0);
-            mc.interactionManager.clickSlot(mc.player.currentScreenHandler.syncId, slot, 1, SlotActionType.QUICK_MOVE, mc.player);
+            mc.gameMode.handleContainerInput(mc.player.containerMenu.containerId, slot, 1, ContainerInput.QUICK_MOVE, mc.player);
             if (restockBacklogSlots.isEmpty()) {
                 if (state.equals(State.AwaitRestockResponse)) {
                     endRestocking();
@@ -961,7 +971,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
                 miningPos = null;
                 state = State.Mining;
             } else {
-                mc.player.setPitch((float) Rotations.getPitch(miningPos));
+                mc.player.setXRot((float) Rotations.getPitch(miningPos));
                 BlockUtils.breakBlock(miningPos, true);
 
                 if (Math.abs(miningPos.getZ() - mc.player.getZ()) >= maxMiningRange.get()) {
@@ -1013,12 +1023,12 @@ public class StaircasedPrinter extends Module implements MapPrinter {
                     refillMiningInventory();
                 } else {
                     HashMap<Item, Integer> requiredItems = getRequiredItems(mapCorner, workingInterval, availableSlots.size(), map);
-                    Pair<ArrayList<Integer>, HashMap<Item, Integer>> invInformation = Utils.getInvInformation(requiredItems, availableSlots);
-                    refillBuildingInventory(invInformation.getRight());
+                    Tuple<ArrayList<Integer>, HashMap<Item, Integer>> invInformation = Utils.getInvInformation(requiredItems, availableSlots);
+                    refillBuildingInventory(invInformation.getB());
                 }
             } else {
                 if (debugPrints.get())
-                    info("Dumping §a" + mc.player.getInventory().getStack(dumpSlot).getName().getString() + " (slot " + dumpSlot + ")");
+                    info("Dumping §a" + mc.player.getInventory().getItem(dumpSlot).getHoverName().getString() + " (slot " + dumpSlot + ")");
                 InvUtils.drop().slot(dumpSlot);
                 timeoutTicks = invActionDelay.get();
             }
@@ -1040,8 +1050,8 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         }
 
         if (closeNextInvPacket) {
-            if (mc.currentScreen != null) {
-                mc.player.closeHandledScreen();
+            if (mc.screen != null) {
+                mc.player.closeContainer();
             }
             closeNextInvPacket = false;
         }
@@ -1059,28 +1069,28 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         }
         Utils.setJumpPressed(false);
         // AutoJump logic
-        if ((mc.options.forwardKey.isPressed() || mc.options.backKey.isPressed()) && jumpTimeout <= 0) {
-            Direction direction = Direction.fromHorizontalDegrees(mc.player.getYaw());
-            if (mc.options.backKey.isPressed()) direction = direction.getOpposite();
-            BlockPos target = mc.player.getBlockPos().offset(direction);
-            if (mc.player.isOnGround() && !MapAreaCache.getCachedBlockState(target).isAir()
-                && MapAreaCache.getCachedBlockState(target.up(1)).isAir() && MapAreaCache.getCachedBlockState(target.up(2)).isAir()) {
+        if ((mc.options.keyUp.isDown() || mc.options.keyDown.isDown()) && jumpTimeout <= 0) {
+            Direction direction = Direction.fromYRot(mc.player.getYRot());
+            if (mc.options.keyDown.isDown()) direction = direction.getOpposite();
+            BlockPos target = mc.player.blockPosition().relative(direction);
+            if (mc.player.onGround() && !MapAreaCache.getCachedBlockState(target).isAir()
+                && MapAreaCache.getCachedBlockState(target.above(1)).isAir() && MapAreaCache.getCachedBlockState(target.above(2)).isAir()) {
                 jumpTimeout = jumpCoolDown.get();
                 Utils.setJumpPressed(true);
             }
         }
         if (checkpoints.isEmpty()) {
             // Creating fallback checkpoint
-            checkpoints.add(new Pair(mc.player.getEntityPos(), new Pair<>("lineEnd", null)));
+            checkpoints.add(new Tuple(mc.player.position(), new Tuple<>("lineEnd", null)));
         }
-        Vec3d goal = checkpoints.get(0).getLeft();
+        Vec3 goal = checkpoints.get(0).getA();
         if (PlayerUtils.distanceTo(goal.add(0, mc.player.getY() - goal.y, 0)) < checkpointBuffer.get()) {
-            Pair<String, BlockPos> checkpointAction = checkpoints.get(0).getRight();
-            if (debugPrints.get() && checkpointAction.getLeft() != null)
-                info("Reached: §a" + checkpointAction.getLeft());
-            if (snapToCheckpoints.get()) mc.player.setPosition(goal.x, mc.player.getY(), goal.z);
+            Tuple<String, BlockPos> checkpointAction = checkpoints.get(0).getB();
+            if (debugPrints.get() && checkpointAction.getA() != null)
+                info("Reached: §a" + checkpointAction.getA());
+            if (snapToCheckpoints.get()) mc.player.setPos(goal.x, mc.player.getY(), goal.z);
             checkpoints.remove(0);
-            switch (checkpointAction.getLeft()) {
+            switch (checkpointAction.getA()) {
                 case "lineEnd":
                     calculateBuildingPath(false);
                     ArrayList<BlockPos> newErrors = getInvalidPlacements();
@@ -1089,7 +1099,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
                         if (logErrors.get()) {
                             info("Error at: " + errorPos.toShortString() + ". Is: "
                                 + MapAreaCache.getCachedBlockState(errorPos).getBlock().getName().getString()
-                                + ". Should be: " + map[relativePos.getX()][relativePos.getZ()].getLeft().getName().getString());
+                                + ". Should be: " + map[relativePos.getX()][relativePos.getZ()].getA().getName().getString());
                         }
                         if (SlaveSystem.isSlave()) {
                             // Obfuscate error pas as relative pos
@@ -1099,35 +1109,35 @@ public class StaircasedPrinter extends Module implements MapPrinter {
                     knownErrors.addAll(newErrors);
                     break;
                 case "mapMaterialChest":
-                    BlockPos mapMaterialChest = getBestChest(Items.CARTOGRAPHY_TABLE).getLeft();
+                    BlockPos mapMaterialChest = getBestChest(Items.CARTOGRAPHY_TABLE).getA();
                     interactWithBlock(mapMaterialChest);
                     state = State.AwaitMapChestResponse;
                     return;
                 case "fillMap":
-                    mc.getNetworkHandler().sendPacket(new PlayerInteractItemC2SPacket(Hand.MAIN_HAND, Utils.getNextInteractID(), mc.player.getYaw(), mc.player.getPitch()));
+                    mc.getConnection().send(new ServerboundUseItemPacket(InteractionHand.MAIN_HAND, Utils.getNextInteractID(), mc.player.getYRot(), mc.player.getXRot()));
                     return;
                 case "cartographyTable":
                     state = State.AwaitCartographyResponse;
-                    interactWithBlock(cartographyTable.getLeft());
+                    interactWithBlock(cartographyTable.getA());
                     return;
                 case "finishedMapChest":
                     state = State.AwaitFinishedMapChestResponse;
-                    interactWithBlock(finishedMapChest.getLeft());
+                    interactWithBlock(finishedMapChest.getA());
                     return;
                 case "dump":
                     state = State.Dumping;
                     Utils.setForwardPressed(false);
-                    mc.player.setYaw(dumpStation.getRight().getLeft());
-                    mc.player.setPitch(dumpStation.getRight().getRight());
+                    mc.player.setYRot(dumpStation.getB().getA());
+                    mc.player.setXRot(dumpStation.getB().getB());
                     return;
                 case "sleep":
-                    interactWithBlock(bed.getLeft());
+                    interactWithBlock(bed.getA());
                     interactTimeout = 0;
-                    mc.getNetworkHandler().sendPacket(new ClientCommandC2SPacket(mc.player, ClientCommandC2SPacket.Mode.STOP_SLEEPING));
+                    mc.getConnection().send(new ServerboundPlayerCommandPacket(mc.player, ServerboundPlayerCommandPacket.Action.STOP_SLEEPING));
                     return;
                 case "refill":
                     state = State.AwaitRestockResponse;
-                    interactWithBlock(checkpointAction.getRight());
+                    interactWithBlock(checkpointAction.getB());
                     return;
                 case "startMine":
                     state = State.Mining;
@@ -1136,18 +1146,18 @@ public class StaircasedPrinter extends Module implements MapPrinter {
                     break;
                 case "miningLineEnd":
                     Utils.setBackwardPressed(false);
-                    checkpoints.add(new Pair(mc.player.getEntityPos(), new Pair<>("miningLineEnd", null)));
+                    checkpoints.add(new Tuple(mc.player.position(), new Tuple<>("miningLineEnd", null)));
                     break;
                 case "usedToolChest":
                     state = State.AwaitUsedToolChestResponse;
-                    interactWithBlock(usedToolChest.getLeft());
+                    interactWithBlock(usedToolChest.getA());
                     return;
             }
             if (checkpoints.isEmpty()) {
                 if (state.equals(State.Walking)) {
                     // Done Building
                     if (SlaveSystem.isSlave()) {
-                        checkpoints.add(new Pair(dumpStation.getLeft(), new Pair("dump", null)));
+                        checkpoints.add(new Tuple(dumpStation.getA(), new Tuple("dump", null)));
                     } else {
                         if (SlaveSystem.allSlavesFinished()) {
                             if (!endBuilding()) return;
@@ -1160,7 +1170,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
                     }
                 }
             }
-            goal = checkpoints.get(0).getLeft();
+            goal = checkpoints.get(0).getA();
         }
 
         //Set yaw rotation
@@ -1168,15 +1178,15 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         if (PlayerUtils.distanceTo(goal) > 2) {
             lookZ = mc.player.getZ() + Math.max(Math.min(goal.z - mc.player.getZ(), 1), -1);
         }
-        Vec3d lookPos = new Vec3d(goal.x, goal.y, lookZ);
+        Vec3 lookPos = new Vec3(goal.x, goal.y, lookZ);
         if (state.equals(State.Walking)) {
-            mc.player.setYaw((float) Rotations.getYaw(lookPos));
+            mc.player.setYRot((float) Rotations.getYaw(lookPos));
         } else {
-            mc.player.setYaw((float) Rotations.getYaw(lookPos) + 180f);
+            mc.player.setYRot((float) Rotations.getYaw(lookPos) + 180f);
         }
 
         // Set print mode
-        String nextAction = checkpoints.get(0).getRight().getLeft();
+        String nextAction = checkpoints.get(0).getB().getA();
         if ((nextAction == "" || nextAction == "lineEnd") && sprinting.get() != SprintMode.Always) {
             mc.player.setSprinting(false);
         } else if (sprinting.get() != SprintMode.Off) {
@@ -1190,19 +1200,19 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         if (miningPos != null || nextBlockPos == null) return;
 
         if (state.equals(State.Walking)) {
-            if (PlayerUtils.distanceTo(nextBlockPos.toCenterPos()) <= interactionRange.get()) {
+            if (PlayerUtils.distanceTo(nextBlockPos.getCenter()) <= interactionRange.get()) {
                 tryPlacingBlock(nextBlockPos);
             }
         } else {
-            Vec3d centerPos = nextBlockPos.toCenterPos();
-            if (centerPos.getZ() - mc.player.getZ() > 0.5) {
+            Vec3 centerPos = nextBlockPos.getCenter();
+            if (centerPos.z() - mc.player.getZ() > 0.5) {
                 miningPos = nextBlockPos;
-                mc.player.setPitch((float) Rotations.getPitch(miningPos));
+                mc.player.setXRot((float) Rotations.getPitch(miningPos));
                 BlockState blockState = MapAreaCache.getCachedBlockState(miningPos);
                 ItemStack bestTool = ToolUtils.getBestTool(toolSet, blockState);
                 for (int slot : availableHotBarSlots) {
-                    if (mc.player.getInventory().getStack(slot).isEmpty()) continue;
-                    Item item = mc.player.getInventory().getStack(slot).getItem();
+                    if (mc.player.getInventory().getItem(slot).isEmpty()) continue;
+                    Item item = mc.player.getInventory().getItem(slot).getItem();
                     if (item.equals(bestTool.getItem())) {
                         InvUtils.swap(slot, false);
                         BlockUtils.breakBlock(miningPos, true);
@@ -1219,33 +1229,33 @@ public class StaircasedPrinter extends Module implements MapPrinter {
 
     // Restocking
 
-    private Pair<BlockPos, Vec3d> getBestChest(Item item) {
-        Vec3d bestPos = null;
+    private Tuple<BlockPos, Vec3> getBestChest(Item item) {
+        Vec3 bestPos = null;
         BlockPos bestChestPos = null;
-        ArrayList<Pair<BlockPos, Vec3d>> list = new ArrayList<>();
+        ArrayList<Tuple<BlockPos, Vec3>> list = new ArrayList<>();
         if (item.equals(Items.CARTOGRAPHY_TABLE)) {
             list = mapMaterialChests;
         } else if (materialDict.containsKey(item)) {
             list = materialDict.get(item);
         } else {
-            warning("No chest found for " + item.getName().getString());
+            warning("No chest found for " + Names.get(item));
             toggle();
-            return new Pair<>(new BlockPos(0, 0, 0), new Vec3d(0, 0, 0));
+            return new Tuple<>(new BlockPos(0, 0, 0), new Vec3(0, 0, 0));
         }
         //Get nearest chest
-        for (Pair<BlockPos, Vec3d> p : list) {
+        for (Tuple<BlockPos, Vec3> p : list) {
             //Skip chests that have already been checked
-            if (checkedChests.contains(p.getLeft())) continue;
-            if (bestPos == null || PlayerUtils.distanceTo(p.getRight()) < PlayerUtils.distanceTo(bestPos)) {
-                bestPos = p.getRight();
-                bestChestPos = p.getLeft();
+            if (checkedChests.contains(p.getA())) continue;
+            if (bestPos == null || PlayerUtils.distanceTo(p.getB()) < PlayerUtils.distanceTo(bestPos)) {
+                bestPos = p.getB();
+                bestChestPos = p.getA();
             }
         }
         if (bestPos == null || bestChestPos == null) {
             checkedChests.clear();
             return getBestChest(item);
         }
-        return new Pair(bestChestPos, bestPos);
+        return new Tuple(bestChestPos, bestPos);
     }
 
     private void refillBuildingInventory(HashMap<Item, Integer> invMaterial) {
@@ -1260,7 +1270,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         for (Item item : requiredItems.keySet()) {
             if (requiredItems.get(item) <= 0) continue;
             int stacks = (int) Math.ceil((float) requiredItems.get(item) / 64f);
-            info("Restocking §a" + stacks + " stacks " + item.getName().getString() + " (" + requiredItems.get(item) + ")");
+            info("Restocking §a" + stacks + " stacks " + Names.get(item) + " (" + requiredItems.get(item) + ")");
             restockList.add(0, Triple.of(item, stacks, requiredItems.get(item)));
         }
         addClosestRestockCheckpoint();
@@ -1274,7 +1284,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         HashMap<ItemStack, Integer> toolUseDict = new HashMap<>();
         for (int x = 0; x < map.length; x++) {
             for (int z = 0; z < 128; z++) {
-                BlockState blockstate = MapAreaCache.getCachedBlockState(mapCorner.add(x, map[x][z].getRight(), z));
+                BlockState blockstate = MapAreaCache.getCachedBlockState(mapCorner.offset(x, map[x][z].getB(), z));
                 if (!blockstate.isAir()) {
                     ItemStack bestTool = ToolUtils.getBestTool(toolSet, blockstate);
                     if (bestTool == null) continue;
@@ -1290,17 +1300,17 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         for (ItemStack itemStack : toolUseDict.keySet()) {
             // Fetch unbreaking level
             int unbreakingLevel = 0;
-            for (var e : EnchantmentHelper.getEnchantments(itemStack).getEnchantmentEntries()) {
-                if (!e.getKey().getKey().isPresent()) continue;
-                if (e.getKey().getKey().get().getValue().equals(Enchantments.UNBREAKING.getValue())) {
+            for (var e : EnchantmentHelper.getEnchantmentsForCrafting(itemStack).entrySet()) {
+                if (!e.getKey().unwrapKey().isPresent()) continue;
+                if (e.getKey().unwrapKey().get().identifier().equals(Enchantments.UNBREAKING.identifier())) {
                     unbreakingLevel = e.getIntValue();
                 }
             }
             int rawUses = toolUseDict.get(itemStack);
-            float slaveModifier = (float) (trueInterval.getRight() - trueInterval.getLeft() + 1) / (float) map.length;
+            float slaveModifier = (float) (trueInterval.getB() - trueInterval.getA() + 1) / (float) map.length;
             double adjustedUses = (float) rawUses / (float) (unbreakingLevel + 1) * durabilityBuffer.get() * slaveModifier;
             int itemsNeeded = (int) Math.ceil(adjustedUses / (float) itemStack.getMaxDamage());
-            info("Restocking §a" + itemsNeeded + " " + itemStack.getItem().getName().getString() + " (" + rawUses + " uses)");
+            info("Restocking §a" + itemsNeeded + " " + Names.get(itemStack.getItem()) + " (" + rawUses + " uses)");
             restockList.add(0, Triple.of(itemStack.getItem().asItem(), itemsNeeded, itemsNeeded));
         }
 
@@ -1312,15 +1322,15 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         if (restockList.isEmpty()) return;
         double smallestDistance = Double.MAX_VALUE;
         Triple<Item, Integer, Integer> closestEntry = null;
-        Pair<BlockPos, Vec3d> restockPos = null;
+        Tuple<BlockPos, Vec3> restockPos = null;
         for (Triple<Item, Integer, Integer> entry : restockList) {
-            Pair<BlockPos, Vec3d> bestRestockPos = getBestChest(entry.getLeft());
-            if (bestRestockPos.getLeft() == null) {
-                warning("No chest found for " + entry.getLeft().getName().getString());
+            Tuple<BlockPos, Vec3> bestRestockPos = getBestChest(entry.getLeft());
+            if (bestRestockPos.getA() == null) {
+                warning("No chest found for " + Names.get(entry.getLeft()));
                 toggle();
                 return;
             }
-            double chestDistance = PlayerUtils.distanceTo(bestRestockPos.getRight());
+            double chestDistance = PlayerUtils.distanceTo(bestRestockPos.getB());
             if (chestDistance < smallestDistance) {
                 smallestDistance = chestDistance;
                 closestEntry = entry;
@@ -1330,7 +1340,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         //Set closest material as first and as checkpoint
         restockList.remove(closestEntry);
         restockList.add(0, closestEntry);
-        checkpoints.add(0, new Pair(restockPos.getRight(), new Pair("refill", restockPos.getLeft())));
+        checkpoints.add(0, new Tuple(restockPos.getB(), new Tuple("refill", restockPos.getA())));
     }
 
     private void endRestocking() {
@@ -1338,8 +1348,8 @@ public class StaircasedPrinter extends Module implements MapPrinter {
             warning("Not all necessary stacks restocked. Searching for another chest...");
             //Search for the next best chest
             checkedChests.add(lastInteractedChest);
-            Pair<BlockPos, Vec3d> bestRestockPos = getBestChest(getMaterialFromPos(lastInteractedChest));
-            checkpoints.add(0, new Pair<>(bestRestockPos.getRight(), new Pair<>("refill", bestRestockPos.getLeft())));
+            Tuple<BlockPos, Vec3> bestRestockPos = getBestChest(getMaterialFromPos(lastInteractedChest));
+            checkpoints.add(0, new Tuple<>(bestRestockPos.getB(), new Tuple<>("refill", bestRestockPos.getA())));
         } else {
             checkedChests.clear();
             restockList.remove(0);
@@ -1357,8 +1367,8 @@ public class StaircasedPrinter extends Module implements MapPrinter {
 
     private Item getMaterialFromPos(BlockPos pos) {
         for (Item item : materialDict.keySet()) {
-            for (Pair<BlockPos, Vec3d> p : materialDict.get(item)) {
-                if (p.getLeft().equals(pos)) return item;
+            for (Tuple<BlockPos, Vec3> p : materialDict.get(item)) {
+                if (p.getA().equals(pos)) return item;
             }
         }
         warning("Could not find material for chest position : " + pos.toShortString());
@@ -1370,12 +1380,12 @@ public class StaircasedPrinter extends Module implements MapPrinter {
 
     private void interactWithBlock(BlockPos chestPos) {
         Utils.setForwardPressed(false);
-        mc.player.setVelocity(0, 0, 0);
-        mc.player.setYaw((float) Rotations.getYaw(chestPos.toCenterPos()));
-        mc.player.setPitch((float) Rotations.getPitch(chestPos.toCenterPos()));
+        mc.player.setDeltaMovement(0, 0, 0);
+        mc.player.setYRot((float) Rotations.getYaw(chestPos.getCenter()));
+        mc.player.setXRot((float) Rotations.getPitch(chestPos.getCenter()));
 
-        BlockHitResult hitResult = new BlockHitResult(chestPos.toCenterPos(), Utils.getInteractionSide(chestPos), chestPos, false);
-        BlockUtils.interact(hitResult, Hand.MAIN_HAND, true);
+        BlockHitResult hitResult = new BlockHitResult(chestPos.getCenter(), Utils.getInteractionSide(chestPos), chestPos, false);
+        BlockUtils.interact(hitResult, InteractionHand.MAIN_HAND, true);
 
         //Set timeout for chest interaction
         interactTimeout = retryInteractTimer.get();
@@ -1384,50 +1394,50 @@ public class StaircasedPrinter extends Module implements MapPrinter {
 
     private void tryPlacingBlock(BlockPos pos) {
         BlockPos relativePos = pos.subtract(mapCorner);
-        Item material = map[relativePos.getX()][relativePos.getZ()].getLeft().asItem();
+        Item material = map[relativePos.getX()][relativePos.getZ()].getA().asItem();
         //info("Placing " + material.getName().getString() + " at: " + relativePos.toShortString());
         //Check hot-bar slots
         for (int slot : availableHotBarSlots) {
-            if (mc.player.getInventory().getStack(slot).isEmpty()) continue;
-            Item foundMaterial = mc.player.getInventory().getStack(slot).getItem();
+            if (mc.player.getInventory().getItem(slot).isEmpty()) continue;
+            Item foundMaterial = mc.player.getInventory().getItem(slot).getItem();
             if (foundMaterial.equals(material)) {
-                BlockUtils.place(pos, Hand.MAIN_HAND, slot, rotatePlace.get(), 50, true, true, false);
+                BlockUtils.place(pos, InteractionHand.MAIN_HAND, slot, rotatePlace.get(), 50, true, true, false);
                 if (material == lastSwappedMaterial) lastSwappedMaterial = null;
                 return;
             }
         }
         for (int slot : availableSlots) {
-            if (mc.player.getInventory().getStack(slot).isEmpty() || availableHotBarSlots.contains(slot)) continue;
-            Item foundMaterial = mc.player.getInventory().getStack(slot).getItem();
+            if (mc.player.getInventory().getItem(slot).isEmpty() || availableHotBarSlots.contains(slot)) continue;
+            Item foundMaterial = mc.player.getInventory().getItem(slot).getItem();
             if (foundMaterial.equals(material)) {
                 lastSwappedMaterial = material;
                 toBeSwappedSlot = slot;
                 Utils.setForwardPressed(false);
-                mc.player.setVelocity(mc.player.getVelocity().x, mc.player.getVelocity().y, 0);
+                mc.player.setDeltaMovement(mc.player.getDeltaMovement().x, mc.player.getDeltaMovement().y, 0);
                 timeoutTicks = preSwapDelay.get();
                 return;
             }
         }
         if (lastSwappedMaterial == material) return;      //Wait for swapped material
-        info("No " + material.getName().getString() + " found in inventory. Resetting...");
-        mc.player.setVelocity(0, 0, 0);
-        Vec3d pathCheckpoint = new Vec3d(mc.player.getX(), mapCorner.toCenterPos().getY(), mapCorner.north().toCenterPos().getZ());
-        checkpoints.add(0, new Pair(mc.player.getEntityPos(), new Pair("walkRestock", null)));
-        checkpoints.add(0, new Pair(pathCheckpoint, new Pair("walkRestock", null)));
-        checkpoints.add(0, new Pair(dumpStation.getLeft(), new Pair("dump", null)));
-        checkpoints.add(0, new Pair(pathCheckpoint, new Pair("walkRestock", null)));
+        info("No " + Names.get(material) + " found in inventory. Resetting...");
+        mc.player.setDeltaMovement(0, 0, 0);
+        Vec3 pathCheckpoint = new Vec3(mc.player.getX(), mapCorner.getCenter().y(), mapCorner.north().getCenter().z());
+        checkpoints.add(0, new Tuple(mc.player.position(), new Tuple("walkRestock", null)));
+        checkpoints.add(0, new Tuple(pathCheckpoint, new Tuple("walkRestock", null)));
+        checkpoints.add(0, new Tuple(dumpStation.getA(), new Tuple("dump", null)));
+        checkpoints.add(0, new Tuple(pathCheckpoint, new Tuple("walkRestock", null)));
     }
 
     private BlockPos getNextBlockPos(boolean mining) {
         // For building: Get next block in working interval
         // For mining: Get next block on current mining line
         int relativeX = mc.player.getBlockX() - mapCorner.getX();
-        int lowerX = mining ? relativeX : workingInterval.getLeft();
-        int upperX = mining ? relativeX : workingInterval.getRight();
+        int lowerX = mining ? relativeX : workingInterval.getA();
+        int upperX = mining ? relativeX : workingInterval.getB();
         for (int x = lowerX; x <= upperX; x++) {
             for (int z = 0; z < 128; z++) {
                 int adjustedZ = mining ? 127 - z : z;
-                BlockPos blockPos = mapCorner.add(x, map[x][adjustedZ].getRight(), adjustedZ);
+                BlockPos blockPos = mapCorner.offset(x, map[x][adjustedZ].getB(), adjustedZ);
                 BlockState blockState = MapAreaCache.getCachedBlockState(blockPos);
                 if (blockState.isAir() ^ mining) {
                     return blockPos;
@@ -1442,43 +1452,43 @@ public class StaircasedPrinter extends Module implements MapPrinter {
     private void calculateBuildingPath(boolean sprintFirst) {
         //Replace checkpoints with path for building (working interval)
         checkpoints.clear();
-        for (int x = workingInterval.getLeft(); x <= workingInterval.getRight(); x++) {
+        for (int x = workingInterval.getA(); x <= workingInterval.getB(); x++) {
             boolean lineFinished = true;
             for (int z = 0; z < 128; z++) {
-                BlockState blockstate = MapAreaCache.getCachedBlockState(mapCorner.add(x, map[x][z].getRight(), z));
+                BlockState blockstate = MapAreaCache.getCachedBlockState(mapCorner.offset(x, map[x][z].getB(), z));
                 if (blockstate.isAir()) {
                     lineFinished = false;
                     break;
                 }
             }
             if (lineFinished) continue;
-            Vec3d cp1 = mapCorner.toCenterPos().add(x, 0.5, -1);
-            Vec3d cp2 = mapCorner.toCenterPos().add(x, map[x][map[0].length - 2].getRight() + 0.5, map[0].length - 2);
-            checkpoints.add(new Pair(cp1, new Pair("", null)));
-            checkpoints.add(new Pair(cp2, new Pair("", null)));
-            checkpoints.add(new Pair(cp1, new Pair("lineEnd", null)));
+            Vec3 cp1 = mapCorner.getCenter().add(x, 0.5, -1);
+            Vec3 cp2 = mapCorner.getCenter().add(x, map[x][map[0].length - 2].getB() + 0.5, map[0].length - 2);
+            checkpoints.add(new Tuple(cp1, new Tuple("", null)));
+            checkpoints.add(new Tuple(cp2, new Tuple("", null)));
+            checkpoints.add(new Tuple(cp1, new Tuple("lineEnd", null)));
         }
         if (checkpoints.size() > 0 && sprintFirst) {
             //Make player sprint to the start of the map
-            Pair<Vec3d, Pair<String, BlockPos>> firstPoint = checkpoints.remove(0);
-            checkpoints.add(0, new Pair(firstPoint.getLeft(), new Pair("sprint", firstPoint.getRight().getRight())));
+            Tuple<Vec3, Tuple<String, BlockPos>> firstPoint = checkpoints.remove(0);
+            checkpoints.add(0, new Tuple(firstPoint.getA(), new Tuple("sprint", firstPoint.getB().getB())));
         }
     }
 
     private void calculateMiningPath() {
         // Replace checkpoints with path for mining (next single line)
         checkpoints.clear();
-        Vec3d cp1 = mapCorner.toCenterPos().add(minedLines, 0.5, -mineLineEndOffset.get());
-        Vec3d cp2 = mapCorner.toCenterPos().add(minedLines, map[minedLines][0].getRight() + 0.5, -1);
+        Vec3 cp1 = mapCorner.getCenter().add(minedLines, 0.5, -mineLineEndOffset.get());
+        Vec3 cp2 = mapCorner.getCenter().add(minedLines, map[minedLines][0].getB() + 0.5, -1);
         for (int i = 0; i < map[minedLines].length - 1; i++) {
-            cp2 = mapCorner.toCenterPos().add(minedLines, map[minedLines][i].getRight() + 0.5, i);
+            cp2 = mapCorner.getCenter().add(minedLines, map[minedLines][i].getB() + 0.5, i);
             if (i + 2 >= map[minedLines].length) break;
-            BlockPos airPos = mapCorner.add(minedLines, map[minedLines][i + 2].getRight(), i + 2);
+            BlockPos airPos = mapCorner.offset(minedLines, map[minedLines][i + 2].getB(), i + 2);
             if (MapAreaCache.getCachedBlockState(airPos).isAir()) break;
         }
-        checkpoints.add(new Pair(cp1, new Pair("miningLineStart", null)));
-        checkpoints.add(new Pair(cp2, new Pair("startMine", null)));
-        checkpoints.add(new Pair(cp1, new Pair("miningLineEnd", null)));
+        checkpoints.add(new Tuple(cp1, new Tuple("miningLineStart", null)));
+        checkpoints.add(new Tuple(cp2, new Tuple("startMine", null)));
+        checkpoints.add(new Tuple(cp1, new Tuple("miningLineEnd", null)));
 
         advanceMinedLines();
     }
@@ -1495,7 +1505,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
 
         boolean isMined = true;
         for (int z = 0; z < map[line].length; z++) {
-            BlockState blockstate = MapAreaCache.getCachedBlockState(mapCorner.add(line, map[line][z].getRight(), z));
+            BlockState blockstate = MapAreaCache.getCachedBlockState(mapCorner.offset(line, map[line][z].getB(), z));
             if (!blockstate.isAir()) {
                 isMined = false;
                 break;
@@ -1510,12 +1520,12 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         if (availableSlots.isEmpty()) setupSlots();
         MapAreaCache.reset(mapCorner);
         calculateBuildingPath(true);
-        checkpoints.add(0, new Pair(dumpStation.getLeft(), new Pair("dump", null)));
+        checkpoints.add(0, new Tuple(dumpStation.getA(), new Tuple("dump", null)));
         if (sleep.get()) {
             if (bed == null) {
                 warning("Can not sleep because bed was not set.");
             } else {
-                checkpoints.add(0, new Pair(bed.getRight(), new Pair("sleep", null)));
+                checkpoints.add(0, new Tuple(bed.getB(), new Tuple("sleep", null)));
             }
         }
         state = State.Walking;
@@ -1525,7 +1535,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         // Only executed on Master
         if (!knownErrors.isEmpty()) {
             if (errorAction.get() == ErrorAction.ManualRepair) {
-                workingInterval = new Pair<>(0, map.length - 1);
+                workingInterval = new Tuple<>(0, map.length - 1);
                 info("Found errors: ");
                 for (int i = knownErrors.size() - 1; i >= 0; i--) {
                     info("Pos: " + knownErrors.get(i).toShortString());
@@ -1541,9 +1551,9 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         workingInterval = trueInterval;
         knownErrors.clear();
         SlaveSystem.setAllSlavesUnfinished();
-        Pair<BlockPos, Vec3d> bestChest = getBestChest(Items.CARTOGRAPHY_TABLE);
-        checkpoints.add(new Pair(dumpStation.getLeft(), new Pair("dump", null)));
-        checkpoints.add(new Pair(bestChest.getRight(), new Pair("mapMaterialChest", bestChest.getLeft())));
+        Tuple<BlockPos, Vec3> bestChest = getBestChest(Items.CARTOGRAPHY_TABLE);
+        checkpoints.add(new Tuple(dumpStation.getA(), new Tuple("dump", null)));
+        checkpoints.add(new Tuple(bestChest.getB(), new Tuple("mapMaterialChest", bestChest.getA())));
         try {
             if (moveToFinishedFolder.get())
                 mapFile.renameTo(new File(mapFile.getParentFile().getAbsolutePath() + File.separator + "_finished_maps" + File.separator + mapFile.getName()));
@@ -1565,7 +1575,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
             if (bed == null) {
                 warning("Can not sleep because bed was not set.");
             } else {
-                checkpoints.add(0, new Pair(bed.getRight(), new Pair("sleep", null)));
+                checkpoints.add(0, new Tuple(bed.getB(), new Tuple("sleep", null)));
             }
         }
         for (String slave : SlaveSystem.slaves) {
@@ -1586,21 +1596,21 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         }
         SlaveSystem.setAllSlavesUnfinished();
         checkpoints.clear();
-        checkpoints.add(0, new Pair(usedToolChest.getRight(), new Pair("usedToolChest", null)));
+        checkpoints.add(0, new Tuple(usedToolChest.getB(), new Tuple("usedToolChest", null)));
         state = State.Walking;
     }
 
     public ArrayList<BlockPos> getInvalidPlacements() {
         ArrayList<BlockPos> invalidPlacements = new ArrayList<>();
-        for (int x = workingInterval.getRight(); x >= workingInterval.getLeft(); x--) {
+        for (int x = workingInterval.getB(); x >= workingInterval.getA(); x--) {
             for (int z = 127; z >= 0; z--) {
-                BlockPos relativePos = new BlockPos(x, map[x][z].getRight(), z);
-                BlockPos absolutePos = mapCorner.add(relativePos);
+                BlockPos relativePos = new BlockPos(x, map[x][z].getB(), z);
+                BlockPos absolutePos = mapCorner.offset(relativePos);
                 if (knownErrors.contains(absolutePos)) continue;
                 BlockState blockState = MapAreaCache.getCachedBlockState(absolutePos);
                 Block block = blockState.getBlock();
                 if (!blockState.isAir()) {
-                    if (map[x][z].getLeft() != block) invalidPlacements.add(absolutePos);
+                    if (map[x][z].getA() != block) invalidPlacements.add(absolutePos);
                 }
             }
         }
@@ -1634,23 +1644,23 @@ public class StaircasedPrinter extends Module implements MapPrinter {
 
     private int getDumpSlot() {
         HashMap<Item, Integer> requiredItems = getRequiredItems(mapCorner, workingInterval, availableSlots.size(), map);
-        Pair<ArrayList<Integer>, HashMap<Item, Integer>> invInformation = Utils.getInvInformation(requiredItems, availableSlots);
-        if (invInformation.getLeft().isEmpty()) {
+        Tuple<ArrayList<Integer>, HashMap<Item, Integer>> invInformation = Utils.getInvInformation(requiredItems, availableSlots);
+        if (invInformation.getA().isEmpty()) {
             return -1;
         }
-        return invInformation.getLeft().get(0);
+        return invInformation.getA().get(0);
     }
 
-    public HashMap<Item, Integer> getRequiredItems(BlockPos mapCorner, Pair<Integer, Integer> interval, int availableSlotsSize, Pair<Block, Integer>[][] map) {
+    public HashMap<Item, Integer> getRequiredItems(BlockPos mapCorner, Tuple<Integer, Integer> interval, int availableSlotsSize, Tuple<Block, Integer>[][] map) {
         //Calculate the next items to restock
         //Iterate over map. Player has to be able to see the complete map area
         HashMap<Item, Integer> requiredItems = new HashMap<>();
-        for (int x = interval.getLeft(); x <= interval.getRight(); x++) {
+        for (int x = interval.getA(); x <= interval.getB(); x++) {
             for (int z = 0; z < 128; z++) {
-                BlockState blockState = MapAreaCache.getCachedBlockState(mapCorner.add(x, map[x][z].getRight(), z));
+                BlockState blockState = MapAreaCache.getCachedBlockState(mapCorner.offset(x, map[x][z].getB(), z));
                 if (blockState.isAir() && map[x][z] != null) {
                     //ChatUtils.info("Add material for: " + mapCorner.add(x + lineBonus, 0, adjustedZ).toShortString());
-                    Item material = map[x][z].getLeft().asItem();
+                    Item material = map[x][z].getA().asItem();
                     if (!requiredItems.containsKey(material)) requiredItems.put(material, 0);
                     requiredItems.put(material, requiredItems.get(material) + 1);
                     //Check if the item fits into inventory. If not, undo the last increment and return
@@ -1666,13 +1676,13 @@ public class StaircasedPrinter extends Module implements MapPrinter {
 
     // MapPrinter Interface for Slave Logic
 
-    public void setInterval(Pair<Integer, Integer> interval) {
+    public void setInterval(Tuple<Integer, Integer> interval) {
         workingInterval = interval;
         trueInterval = interval;
     }
 
     public void addError(BlockPos relPos) {
-        BlockPos absPos = mapCorner.add(relPos.getX(), map[relPos.getX()][relPos.getZ()].getRight(), relPos.getZ());
+        BlockPos absPos = mapCorner.offset(relPos.getX(), map[relPos.getX()][relPos.getZ()].getB(), relPos.getZ());
         if (!knownErrors.contains(absPos)) knownErrors.add(new BlockPos(absPos));
     }
 
@@ -1695,7 +1705,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         }
         if (state.equals(State.AwaitSlaveMineLine)) {
             checkpoints.clear();
-            checkpoints.add(0, new Pair(usedToolChest.getRight(), new Pair("usedToolChest", null)));
+            checkpoints.add(0, new Tuple(usedToolChest.getB(), new Tuple("usedToolChest", null)));
             state = State.Walking;
         }
     }
@@ -1709,7 +1719,7 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         knownErrors.clear();
         checkpoints.clear();
         if (SlaveSystem.isSlave()) {
-            checkpoints.add(new Pair(dumpStation.getLeft(), new Pair("dump", null)));
+            checkpoints.add(new Tuple(dumpStation.getA(), new Tuple("dump", null)));
             state = State.Walking;
         } else {
             try {
@@ -1772,13 +1782,13 @@ public class StaircasedPrinter extends Module implements MapPrinter {
                 mapCorner,
                 materialDict,
                 toolSet);
-            Text configText = Text.literal(configFile.getName())
-                .styled(style -> style
-                    .withColor(Formatting.GREEN)
+            Component configText = Component.literal(configFile.getName())
+                .withStyle(style -> style
+                    .withColor(ChatFormatting.GREEN)
                     .withClickEvent(new ClickEvent.OpenFile(configFile.getAbsolutePath().toString()))
-                    .withHoverEvent(new HoverEvent.ShowText(Text.literal("Open config")))
-                    .withUnderline(true));
-            info(Text.literal("Successfully saved config to: ").append(configText));
+                    .withHoverEvent(new HoverEvent.ShowText(Component.literal("Open config")))
+                    .withUnderlined(true));
+            info(Component.literal("Successfully saved config to: ").append(configText));
         } catch (IOException e) {
             error("Failed to create config file.");
         }
@@ -1827,13 +1837,13 @@ public class StaircasedPrinter extends Module implements MapPrinter {
             MapAreaCache.reset(mapCorner);
             this.materialDict = data.materialDict;
             this.toolSet = data.toolSet;
-            Text configText = Text.literal(configFile.getName())
-                .styled(style -> style
-                    .withColor(Formatting.GREEN)
+            Component configText = Component.literal(configFile.getName())
+                .withStyle(style -> style
+                    .withColor(ChatFormatting.GREEN)
                     .withClickEvent(new ClickEvent.OpenFile(configFile.getAbsolutePath().toString()))
-                    .withHoverEvent(new HoverEvent.ShowText(Text.literal("Open config")))
-                    .withUnderline(true));
-            info(Text.literal("Successfully loaded config: ").append(configText));
+                    .withHoverEvent(new HoverEvent.ShowText(Component.literal("Open config")))
+                    .withUnderlined(true));
+            info(Component.literal("Successfully loaded config: ").append(configText));
             info("Interact with the Start Block to start printing.");
             state = State.SelectingChests;
         } catch (IOException e) {
@@ -1866,19 +1876,19 @@ public class StaircasedPrinter extends Module implements MapPrinter {
     private boolean loadNBTFile() {
         try {
             info("Building: §a" + mapFile.getName());
-            NbtSizeTracker sizeTracker = new NbtSizeTracker(0x20000000L, 100);
-            NbtCompound nbt = NbtIo.readCompressed(mapFile.toPath(), sizeTracker);
+            NbtAccounter sizeTracker = new NbtAccounter(0x20000000L, 100);
+            CompoundTag nbt = NbtIo.readCompressed(mapFile.toPath(), sizeTracker);
             //Extracting the palette
-            NbtList paletteList = (NbtList) nbt.get("palette");
+            ListTag paletteList = (ListTag) nbt.get("palette");
             blockPaletteDict = Utils.getBlockPalette(paletteList);
 
-            NbtList blockList = (NbtList) nbt.get("blocks");
+            ListTag blockList = (ListTag) nbt.get("blocks");
             map = generateMapArray(blockList);
 
             info("Requirements: ");
-            for (Pair<Block, Integer> p : blockPaletteDict.values()) {
-                if (p.getRight() == 0) continue;
-                info(p.getLeft().getName().getString() + ": " + p.getRight());
+            for (Tuple<Block, Integer> p : blockPaletteDict.values()) {
+                if (p.getB() == 0) continue;
+                info(p.getA().getName().getString() + ": " + p.getB());
             }
 
             //Check if a full 128x128 map is present
@@ -1897,21 +1907,21 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         }
     }
 
-    private Pair<Block, Integer>[][] generateMapArray(NbtList blockList) {
+    private Tuple<Block, Integer>[][] generateMapArray(ListTag blockList) {
         // Get the highest block of each column
-        Pair<Block, Integer>[][] absoluteHeightMap = new Pair[128][129];
+        Tuple<Block, Integer>[][] absoluteHeightMap = new Tuple[128][129];
         for (int i = 0; i < blockList.size(); i++) {
-            Optional<NbtCompound> blockOpt = blockList.getCompound(i);
+            Optional<CompoundTag> blockOpt = blockList.getCompound(i);
             if (blockOpt.isEmpty()) continue;
 
-            NbtCompound block = blockOpt.get();
+            CompoundTag block = blockOpt.get();
 
             Optional<Integer> blockIdOpt = block.getInt("state");
             if (blockIdOpt.isEmpty() || !blockPaletteDict.containsKey(blockIdOpt.get())) continue;
 
             int blockId = blockIdOpt.get();
 
-            NbtList pos = block.getList("pos").get();
+            ListTag pos = block.getList("pos").get();
 
             Optional<Integer> xOpt = pos.getInt(0);
             Optional<Integer> yOpt = pos.getInt(1);
@@ -1923,23 +1933,23 @@ public class StaircasedPrinter extends Module implements MapPrinter {
             int x = xOpt.get();
             int y = yOpt.get();
             int z = zOpt.get();
-            if (absoluteHeightMap[x][z] == null || absoluteHeightMap[x][z].getRight() < y) {
-                Block material = blockPaletteDict.get(blockId).getLeft();
-                absoluteHeightMap[x][z] = new Pair<>(material, y);
+            if (absoluteHeightMap[x][z] == null || absoluteHeightMap[x][z].getB() < y) {
+                Block material = blockPaletteDict.get(blockId).getA();
+                absoluteHeightMap[x][z] = new Tuple<>(material, y);
             }
             if (z > 0) {
-                blockPaletteDict.put(blockId, new Pair(blockPaletteDict.get(blockId).getLeft(), blockPaletteDict.get(blockId).getRight() + 1));
+                blockPaletteDict.put(blockId, new Tuple(blockPaletteDict.get(blockId).getA(), blockPaletteDict.get(blockId).getB() + 1));
             }
         }
         // Smooth the y pos out to max 1 block difference
-        Pair<Block, Integer>[][] smoothedHeightMap = new Pair[128][128];
+        Tuple<Block, Integer>[][] smoothedHeightMap = new Tuple[128][128];
         for (int x = 0; x < absoluteHeightMap.length; x++) {
             int totalYDiff = 0;
             for (int z = 1; z < absoluteHeightMap[0].length; z++) {
-                int predecessorY = absoluteHeightMap[x][z - 1].getRight();
-                int currentY = absoluteHeightMap[x][z].getRight();
+                int predecessorY = absoluteHeightMap[x][z - 1].getB();
+                int currentY = absoluteHeightMap[x][z].getB();
                 totalYDiff += Math.max(-1, Math.min(currentY - predecessorY, 1));
-                smoothedHeightMap[x][z - 1] = new Pair<>(absoluteHeightMap[x][z].getLeft(), totalYDiff);
+                smoothedHeightMap[x][z - 1] = new Tuple<>(absoluteHeightMap[x][z].getA(), totalYDiff);
             }
         }
         return smoothedHeightMap;
@@ -2009,9 +2019,9 @@ public class StaircasedPrinter extends Module implements MapPrinter {
         event.renderer.box(mapCorner.getX(), mapCorner.getY(), mapCorner.getZ(), mapCorner.getX() + 128, mapCorner.getY(), mapCorner.getZ() + 128, color.get(), color.get(), ShapeMode.Lines, 0);
 
         if (renderMap.get() && !(state.equals(State.Mining) || state.equals(State.AwaitBlockBreak))) {
-            for (int x = workingInterval.getLeft(); x <= workingInterval.getRight(); x++) {
+            for (int x = workingInterval.getA(); x <= workingInterval.getB(); x++) {
                 for (int z = 0; z < map[0].length; z++) {
-                    BlockPos renderPos = mapCorner.add(x, map[x][z].getRight(), z);
+                    BlockPos renderPos = mapCorner.offset(x, map[x][z].getB(), z);
                     if (!MapAreaCache.getCachedBlockState(renderPos).isAir()) continue;
                     event.renderer.box(renderPos, color.get(), color.get(), ShapeMode.Lines, 0);
                 }
@@ -2024,46 +2034,46 @@ public class StaircasedPrinter extends Module implements MapPrinter {
             }
         }
 
-        ArrayList<Pair<BlockPos, Vec3d>> renderedPairs = new ArrayList<>();
-        for (ArrayList<Pair<BlockPos, Vec3d>> list : materialDict.values()) {
+        ArrayList<Tuple<BlockPos, Vec3>> renderedPairs = new ArrayList<>();
+        for (ArrayList<Tuple<BlockPos, Vec3>> list : materialDict.values()) {
             renderedPairs.addAll(list);
         }
         renderedPairs.addAll(mapMaterialChests);
-        for (Pair<BlockPos, Vec3d> pair : renderedPairs) {
+        for (Tuple<BlockPos, Vec3> pair : renderedPairs) {
             if (renderChestPositions.get())
-                event.renderer.box(pair.getLeft(), color.get(), color.get(), ShapeMode.Lines, 0);
+                event.renderer.box(pair.getA(), color.get(), color.get(), ShapeMode.Lines, 0);
             if (renderOpenPositions.get()) {
-                Vec3d openPos = pair.getRight();
+                Vec3 openPos = pair.getB();
                 event.renderer.box(openPos.x - indicatorSize.get(), openPos.y - indicatorSize.get(), openPos.z - indicatorSize.get(), openPos.x + indicatorSize.get(), openPos.y + indicatorSize.get(), openPos.z + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
             }
         }
 
         if (renderCheckpoints.get()) {
-            for (Pair<Vec3d, Pair<String, BlockPos>> pair : checkpoints) {
-                Vec3d cp = pair.getLeft();
-                event.renderer.box(cp.x - indicatorSize.get(), cp.y - indicatorSize.get(), cp.z - indicatorSize.get(), cp.getX() + indicatorSize.get(), cp.getY() + indicatorSize.get(), cp.getZ() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
+            for (Tuple<Vec3, Tuple<String, BlockPos>> pair : checkpoints) {
+                Vec3 cp = pair.getA();
+                event.renderer.box(cp.x - indicatorSize.get(), cp.y - indicatorSize.get(), cp.z - indicatorSize.get(), cp.x() + indicatorSize.get(), cp.y() + indicatorSize.get(), cp.z() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
             }
         }
 
         if (renderSpecialInteractions.get()) {
             if (usedToolChest != null) {
-                event.renderer.box(usedToolChest.getLeft(), color.get(), color.get(), ShapeMode.Lines, 0);
-                event.renderer.box(usedToolChest.getRight().x - indicatorSize.get(), usedToolChest.getRight().y - indicatorSize.get(), usedToolChest.getRight().z - indicatorSize.get(), usedToolChest.getRight().getX() + indicatorSize.get(), usedToolChest.getRight().getY() + indicatorSize.get(), usedToolChest.getRight().getZ() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
+                event.renderer.box(usedToolChest.getA(), color.get(), color.get(), ShapeMode.Lines, 0);
+                event.renderer.box(usedToolChest.getB().x - indicatorSize.get(), usedToolChest.getB().y - indicatorSize.get(), usedToolChest.getB().z - indicatorSize.get(), usedToolChest.getB().x() + indicatorSize.get(), usedToolChest.getB().y() + indicatorSize.get(), usedToolChest.getB().z() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
             }
             if (bed != null) {
-                event.renderer.box(bed.getLeft(), color.get(), color.get(), ShapeMode.Lines, 0);
-                event.renderer.box(bed.getRight().x - indicatorSize.get(), bed.getRight().y - indicatorSize.get(), bed.getRight().z - indicatorSize.get(), bed.getRight().getX() + indicatorSize.get(), bed.getRight().getY() + indicatorSize.get(), bed.getRight().getZ() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
+                event.renderer.box(bed.getA(), color.get(), color.get(), ShapeMode.Lines, 0);
+                event.renderer.box(bed.getB().x - indicatorSize.get(), bed.getB().y - indicatorSize.get(), bed.getB().z - indicatorSize.get(), bed.getB().x() + indicatorSize.get(), bed.getB().y() + indicatorSize.get(), bed.getB().z() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
             }
             if (cartographyTable != null) {
-                event.renderer.box(cartographyTable.getLeft(), color.get(), color.get(), ShapeMode.Lines, 0);
-                event.renderer.box(cartographyTable.getRight().x - indicatorSize.get(), cartographyTable.getRight().y - indicatorSize.get(), cartographyTable.getRight().z - indicatorSize.get(), cartographyTable.getRight().getX() + indicatorSize.get(), cartographyTable.getRight().getY() + indicatorSize.get(), cartographyTable.getRight().getZ() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
+                event.renderer.box(cartographyTable.getA(), color.get(), color.get(), ShapeMode.Lines, 0);
+                event.renderer.box(cartographyTable.getB().x - indicatorSize.get(), cartographyTable.getB().y - indicatorSize.get(), cartographyTable.getB().z - indicatorSize.get(), cartographyTable.getB().x() + indicatorSize.get(), cartographyTable.getB().y() + indicatorSize.get(), cartographyTable.getB().z() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
             }
             if (dumpStation != null) {
-                event.renderer.box(dumpStation.getLeft().x - indicatorSize.get(), dumpStation.getLeft().y - indicatorSize.get(), dumpStation.getLeft().z - indicatorSize.get(), dumpStation.getLeft().getX() + indicatorSize.get(), dumpStation.getLeft().getY() + indicatorSize.get(), dumpStation.getLeft().getZ() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
+                event.renderer.box(dumpStation.getA().x - indicatorSize.get(), dumpStation.getA().y - indicatorSize.get(), dumpStation.getA().z - indicatorSize.get(), dumpStation.getA().x() + indicatorSize.get(), dumpStation.getA().y() + indicatorSize.get(), dumpStation.getA().z() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
             }
             if (finishedMapChest != null) {
-                event.renderer.box(finishedMapChest.getLeft(), color.get(), color.get(), ShapeMode.Lines, 0);
-                event.renderer.box(finishedMapChest.getRight().x - indicatorSize.get(), finishedMapChest.getRight().y - indicatorSize.get(), finishedMapChest.getRight().z - indicatorSize.get(), finishedMapChest.getRight().getX() + indicatorSize.get(), finishedMapChest.getRight().getY() + indicatorSize.get(), finishedMapChest.getRight().getZ() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
+                event.renderer.box(finishedMapChest.getA(), color.get(), color.get(), ShapeMode.Lines, 0);
+                event.renderer.box(finishedMapChest.getB().x - indicatorSize.get(), finishedMapChest.getB().y - indicatorSize.get(), finishedMapChest.getB().z - indicatorSize.get(), finishedMapChest.getB().x() + indicatorSize.get(), finishedMapChest.getB().y() + indicatorSize.get(), finishedMapChest.getB().z() + indicatorSize.get(), color.get(), color.get(), ShapeMode.Both, 0);
             }
         }
     }
